@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>بونات الكريدي — محطة الوقود</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="toast" class="toast hidden"></div>
+
+<!-- ============ شاشة الدخول / إنشاء الحساب ============ -->
+<section id="authView" class="auth">
+  <div class="auth-blob b1"></div>
+  <div class="auth-blob b2"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="3" width="10" height="18" rx="2"/><path d="M7 7h4"/><path d="M14 9h3l3 3v6a2 2 0 0 1-4 0"/><path d="M3 21h12"/>
+      </svg>
+    </div>
+    <h1>بونات الكريدي</h1>
+    <p class="sub">عمال محطة الوقود — صوّر البون، يروح للجوجل درايف. يخدم بلا إنترنت</p>
+
+    <form id="loginForm" class="form">
+      <div class="field">
+        <label>الاسم</label>
+        <input id="loginName" autocomplete="username" placeholder="اسم العامل" required>
+      </div>
+      <div class="field">
+        <label>الكود</label>
+        <input id="loginCode" type="password" inputmode="numeric" placeholder="••••" required>
+      </div>
+      <p id="loginError" class="form-error hidden"></p>
+      <button class="btn primary block" type="submit">دخول</button>
+      <button id="showSetup" class="link-btn hidden" type="button">إنشاء حساب المدير</button>
+    </form>
+
+    <form id="setupForm" class="form hidden">
+      <div class="setup-title">إنشاء حساب المدير</div>
+      <div class="field">
+        <label>اسم المدير</label>
+        <input id="setupName" placeholder="مثال: يوسف" required>
+      </div>
+      <div class="field">
+        <label>الكود</label>
+        <input id="setupCode" type="password" inputmode="numeric" placeholder="4 أرقام أو أكثر" required>
+      </div>
+      <div class="field">
+        <label>تأكيد الكود</label>
+        <input id="setupCode2" type="password" inputmode="numeric" placeholder="عاود الكود" required>
+      </div>
+      <p id="setupError" class="form-error hidden"></p>
+      <button class="btn primary block" type="submit">إنشاء الحساب</button>
+      <button id="backToLogin" class="link-btn" type="button">رجوع للدخول</button>
+    </form>
+  </div>
+</section>
+
+<!-- ============ التطبيق ============ -->
+<div id="appView" class="hidden">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="3" width="10" height="18" rx="2"/><path d="M7 7h4"/><path d="M14 9h3l3 3v6a2 2 0 0 1-4 0"/><path d="M3 21h12"/>
+        </svg>
+      </span>
+      <span class="brand-txt">البونات</span>
+    </div>
+    <nav id="nav" class="nav"></nav>
+    <div class="userbox">
+      <span id="userBadge" class="badge"></span>
+      <span id="userName" class="uname"></span>
+      <button id="logoutBtn" class="btn-icon ghost" title="خروج"></button>
+    </div>
+  </header>
+
+  <main id="main" class="main"></main>
+
+  <button id="fab" class="fab" title="بون جديد"></button>
+</div>
+
+<!-- ============ نافذة منبثقة ============ -->
+<div id="overlay" class="overlay hidden">
+  <div id="sheet" class="sheet" role="dialog" aria-modal="true"></div>
+</div>
+
+<input id="importFile" type="file" accept="application/json,.json" class="hidden">
+
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
