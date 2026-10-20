@@ -583,12 +583,14 @@ const I = {
 const TABS = {
   home:    { label: "الرئيسية", ico: "home" },
   items:   { label: "البونات",  ico: "fuel" },
-  workers: { label: "العمال",    ico: "users",    adminOnly: true },
+  workers: { label: "الحسابات", ico: "users",    adminOnly: true },
   settings:{ label: "الإعدادات", ico: "settings", adminOnly: true }
 };
 
 const S = { user: null, tab: "home", users: [], items: [], q: "", wf: "all", showCodes: {}, driveUrl: "", lastSync: 0 };
 const _turl = {};
+
+const DEFAULT_DRIVE_URL = "https://script.google.com/macros/s/AKfycbxRS9ol2Drr2NSl0HnWoiwckN4HWWmUHEb9Qbqa1olKoiYtcgQDEs_EnTbu9U3zDo4d/exec";
 
 const APPS_SCRIPT_CODE = `function clean_(s) {
   return String(s || "autre").replace(/[\\\\\\/:*?"<>|]/g, "_").slice(0, 80) || "autre";
@@ -673,9 +675,19 @@ function todayISO() {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 function fmtDate(iso) {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-");
+  if (iso === null || iso === undefined || iso === "") return "";
+  const s = String(iso);
+  const parts = s.split("-");
+  if (parts.length < 3) return s;
+  const [y, m, d] = parts;
   return `${d}/${m}/${y}`;
+}
+function fmtDateTime(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 function monthKey(iso) { return (iso || "").slice(0, 7); }
 function fmtAmt(n) { return (Number(n) || 0).toLocaleString("fr-FR"); }
@@ -706,7 +718,7 @@ async function refreshData() {
   S.users = await dbAll("users");
   S.items = await dbAll("bons");
   const st = await dbGet("settings", "driveUrl");
-  S.driveUrl = (st && st.value) || "";
+  S.driveUrl = (st && st.value) || DEFAULT_DRIVE_URL;
   const ls = await dbGet("settings", "lastSync");
   S.lastSync = (ls && ls.value) || 0;
 }
@@ -813,7 +825,11 @@ $("#recoverForm").addEventListener("submit", async (e) => {
   const name = normName($("#recName").value);
   const code = $("#recCode").value.trim();
   const code2 = $("#recCode2").value.trim();
-  const u = S.users.find(x => normName(x.name) === name);
+  let u = S.users.find(x => normName(x.name) === name);
+  if (!u && S.driveUrl && navigator.onLine) {
+    await cloudPullOnly(true);
+    u = S.users.find(x => normName(x.name) === name);
+  }
   if (!u) { err.textContent = "ما لقينا حتى حساب بهاد الاسم"; err.classList.remove("hidden"); return; }
   if (!u.active) { err.textContent = "هاد الحساب موقوف، تاصل بالأدمن"; err.classList.remove("hidden"); return; }
 
@@ -861,7 +877,14 @@ $("#loginForm").addEventListener("submit", async (e) => {
   err.classList.add("hidden");
   const name = normName($("#loginName").value);
   const code = $("#loginCode").value.trim();
-  const u = S.users.find(x => normName(x.name) === name);
+  let u = S.users.find(x => normName(x.name) === name);
+  if (!u && S.driveUrl && navigator.onLine) {
+    err.textContent = "كنقلّب فالسيرفر...";
+    err.classList.remove("hidden");
+    await cloudPullOnly(true);
+    u = S.users.find(x => normName(x.name) === name);
+    err.classList.add("hidden");
+  }
   if (!u) { err.textContent = "ما لقينا حتى حساب بهاد الاسم"; err.classList.remove("hidden"); return; }
   if (!u.active) { err.textContent = "هاد الحساب موقوف، تاصل بالأدمن"; err.classList.remove("hidden"); return; }
   const h = await hashText(code);
@@ -1541,35 +1564,39 @@ async function flushQueue(silent) {
   if (ok) toast(`تم إرسال ${ok} بون للDrive`, "ok");
 }
 
-/* ================= العمال (أدمن) ================= */
+/* ================= الحسابات (أدمن) ================= */
 function renderWorkers() {
+  const admins = S.users.filter(u => u.role === "admin");
   const workers = S.users.filter(u => u.role !== "admin");
   $("#main").innerHTML = `
     <div class="section-head">
-      <h2>عمال المحطة (${workers.length})</h2>
-      <button class="btn primary sm" id="addWorker">${I.plus} عامل جديد</button>
+      <h2>الحسابات (${S.users.length})</h2>
+      <button class="btn primary sm" id="addWorker">${I.plus} حساب جديد</button>
     </div>
     <div class="dlist" id="wlist"></div>`;
 
   const list = $("#wlist");
-  if (!workers.length) {
-    list.innerHTML = `<div class="empty">ما كاين حتى عامل. زيد عمال المحطة باش يدخلو بسمهم والكود.</div>`;
+  if (!S.users.length) {
+    list.innerHTML = `<div class="empty">ما كاين حتى حساب.</div>`;
   } else {
-    list.innerHTML = workers.map(u => {
+    const ordered = admins.concat(workers);
+    list.innerHTML = ordered.map(u => {
+      const isAdmin = u.role === "admin";
       const mine = S.items.filter(d => d.workerId === u.id);
       const amt = mine.reduce((s, d) => s + (Number(d.amount) || 0), 0);
       const shown = S.showCodes[u.id] ? "••••••" : "••••";
+      const self = S.user && u.id === S.user.id;
       return `<div class="wrow ${u.active ? "" : "off"}">
         <div class="avatar">${esc(u.name.trim().charAt(0) || "؟")}</div>
         <div class="winfo">
-          <b>${esc(u.name)}</b>
+          <b>${esc(u.name)} ${isAdmin ? `<span class="badge admin">أدمن</span>` : ""}${self ? ` <span class="badge">أنا</span>` : ""}</b>
           <small>الكود: ${shown} — ${mine.length} بون — ${fmtAmt(amt)} دج</small>
         </div>
         <div class="wact">
           <button class="btn-icon ghost sm" data-show="${u.id}" title="إظهار/إخفاء الكود">${I.eye}</button>
           <button class="btn-icon ghost sm" data-token="${u.id}" title="كود استرجاع مؤقت">${I.key}</button>
           <button class="btn-icon ghost sm" data-edit="${u.id}" title="تعديل">${I.edit}</button>
-          <button class="btn-icon ${u.active ? "danger" : "ghost"} sm" data-toggle="${u.id}" title="${u.active ? "إيقاف" : "تفعيل"}">${I.lock}</button>
+          ${(!self && !(isAdmin && admins.length <= 1)) ? `<button class="btn-icon ${u.active ? "danger" : "ghost"} sm" data-toggle="${u.id}" title="${u.active ? "إيقاف" : "تفعيل"}">${I.lock}</button>` : ""}
         </div>
       </div>`;
     }).join("");
@@ -1618,12 +1645,18 @@ async function genTempToken(u) {
 
 function openWorkerSheet(worker) {
   const code = worker ? "" : makeCode(5);
-  openSheet(worker ? "تعديل عامل" : "عامل جديد", `
+  const isSelf = worker && S.user && worker.id === S.user.id;
+  openSheet(worker ? (worker.role === "admin" ? "تعديل أدمن" : "تعديل عامل") : "حساب جديد", `
     <form id="workerForm">
       <div class="field"><label>الاسم الكامل</label>
         <input id="wName" required value="${worker ? esc(worker.name) : ""}" placeholder="مثال: كريم"></div>
-      ${worker ? "" : `<div class="field"><label>الكود (العامل يدخل بيه)</label>
-        <input id="wCode" required value="${code}" inputmode="numeric"></div>`}
+      ${worker ? "" : `<div class="field"><label>الكود (يدخل بيه)</label>
+        <input id="wCode" required value="${code}" inputmode="numeric"></div>
+      <div class="field"><label>الصلاحية</label>
+        <select id="wRole">
+          <option value="worker">عامل محطة</option>
+          <option value="admin">أدمن</option>
+        </select></div>`}
       <div class="field"><label>السؤال السري (للاسترجاع)</label>
         <input id="wQuestion" value="${worker ? esc(worker.question || "") : ""}" placeholder="مثال: اسم أول مدير؟"></div>
       <div class="field"><label>الجواب السري${worker ? " (خليه فارغ إلا ما بدلتوش)" : ""}</label>
@@ -1644,8 +1677,9 @@ function openWorkerSheet(worker) {
     const answer = $("#wAnswer").value.trim();
     if (name.length < 2) { err.textContent = "الاسم قصير بزاف"; err.classList.remove("hidden"); return; }
     const dup = S.users.find(u => normName(u.name) === normName(name) && u.id !== (worker && worker.id));
-    if (dup) { err.textContent = "كاين عامل بنفس الاسم"; err.classList.remove("hidden"); return; }
+    if (dup) { err.textContent = "كاين حساب بنفس الاسم"; err.classList.remove("hidden"); return; }
     if (worker) {
+      if (isSelf && name !== worker.name) { err.textContent = "ما تقدرش تبدل اسم حسابك من هنا"; err.classList.remove("hidden"); return; }
       if (question) {
         if (answer && answer.length < 2) { err.textContent = "الجواب قصير بزاف"; err.classList.remove("hidden"); return; }
         worker.name = name;
@@ -1661,12 +1695,13 @@ function openWorkerSheet(worker) {
       toast("تم التعديل", "ok");
     } else {
       const c = $("#wCode").value.trim();
+      const role = ($("#wRole") && $("#wRole").value) || "worker";
       if (c.length < 4) { err.textContent = "الكود خاصو 4 أرقام على الأقل"; err.classList.remove("hidden"); return; }
       if (question.length < 3) { err.textContent = "كتب السؤال السري"; err.classList.remove("hidden"); return; }
       if (answer.length < 2) { err.textContent = "كتب الجواب السري"; err.classList.remove("hidden"); return; }
-      const u = { id: uid(), name, codeHash: await hashText(c), question, answerHash: await hashText(normAnswer(answer)), role: "worker", active: true, createdAt: Date.now() };
+      const u = { id: uid(), name, codeHash: await hashText(c), question, answerHash: await hashText(normAnswer(answer)), role, active: true, createdAt: Date.now() };
       await dbPut("users", u);
-      toast("تمت الإضافة — كود العامل: " + c, "ok", 6000);
+      toast("تمت الإضافة — الكود: " + c, "ok", 6000);
     }
     await refreshData();
     closeSheet();
@@ -1906,6 +1941,7 @@ function renderSettings() {
       <div class="row">
         <button class="btn primary" id="saveUrl">${I.down} حفظ الرابط</button>
         <button class="btn ghost" id="testUrl">${I.send} اختبار الرابط</button>
+        <button class="btn ghost" id="resetUrl">↺ الرابط الافتراضي</button>
         ${pendN ? `<button class="btn primary" id="flushBtn">${I.sync} أرسل المعلق (${pendN})</button>` : ""}
       </div>
     </div>
@@ -1913,7 +1949,7 @@ function renderSettings() {
     <div class="panel">
       <h3>${I.sync} المزامنة بين الأجهزة</h3>
       <p>كتسجل العمال و البونات فالهاتف و فPC؟ دير مزامنة و كلشي كيتوحّد تلقائيا عبر Google Drive ديالك. <b>البيانات فقط</b> (بلا صور).</p>
-      <div class="info-line"><span>آخر مزامنة</span><b id="lastSyncTxt">${S.lastSync ? fmtDate(S.lastSync) : "— ما زال"}</b></div>
+      <div class="info-line"><span>آخر مزامنة</span><b id="lastSyncTxt">${S.lastSync ? fmtDateTime(S.lastSync) : "— ما زال"}</b></div>
       <div class="row">
         <button class="btn primary" id="syncBtn">${I.sync} زامن دابا</button>
       </div>
@@ -1991,6 +2027,12 @@ function renderSettings() {
     S.driveUrl = v;
     toast("تم حفظ الرابط", "ok");
     if (v && pendingItems().length && navigator.onLine) flushQueue();
+  };
+  $("#resetUrl").onclick = async () => {
+    await dbPut("settings", { key: "driveUrl", value: "" });
+    S.driveUrl = DEFAULT_DRIVE_URL;
+    $("#driveUrl").value = DEFAULT_DRIVE_URL;
+    toast("رجع الرابط الافتراضي", "ok");
   };
   $("#testUrl").onclick = async () => {
     const v = $("#driveUrl").value.trim() || S.driveUrl;
@@ -2110,12 +2152,13 @@ async function mergeRemote(remote) {
 }
 
 let _syncing = false;
-async function cloudPullOnly() {
-  if (_syncing || !S.driveUrl || !navigator.onLine) return;
+async function cloudPullOnly(force) {
+  if (!S.driveUrl || !navigator.onLine) return 0;
+  if (_syncing && !force) return 0;
   _syncing = true;
   try {
     const pull = await cloudRequest("pull");
-    const added = mergeRemote(pull.data || {});
+    const added = await mergeRemote(pull.data || {});
     if (added) {
       await refreshData();
       if (!S.user) {
@@ -2124,7 +2167,8 @@ async function cloudPullOnly() {
         go(S.tab);
       }
     }
-  } catch (e) { /* صامت */ }
+    return added;
+  } catch (e) { return 0; }
   finally { _syncing = false; }
 }
 async function cloudSync(silent) {
@@ -2140,7 +2184,7 @@ async function cloudSync(silent) {
     S.lastSync = Date.now();
     await dbPut("settings", { key: "lastSync", value: S.lastSync });
     const lt = $("#lastSyncTxt");
-    if (lt) lt.textContent = fmtDate(S.lastSync);
+    if (lt) lt.textContent = fmtDateTime(S.lastSync);
     if (S.tab) go(S.tab);
     if (!silent || added) toast(added ? `تمت المزامنة — ${added} جديد` : "كلشي محدّث", "ok");
   } catch (e) {
