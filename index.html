@@ -320,6 +320,39 @@ ol.steps b{color:var(--ink)}
   @keyframes bottomIn{from{transform:translateY(100%)}to{transform:none}}
 }
 
+/* ===== حسابي ===== */
+.acc-who{align-self:center;color:var(--muted);font-weight:700;font-size:13px}
+.acc-panel{margin-bottom:16px}
+.acc-panel h3{margin:0 0 8px;font-size:15px;color:var(--brand)}
+.acc-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:14px}
+.acc-table{border-collapse:collapse;width:100%;min-width:600px;font-size:13px}
+.acc-table th,.acc-table td{border:1px solid var(--line);padding:6px 8px;text-align:center;white-space:nowrap}
+.acc-table thead th{background:#f2f5f8;color:var(--brand);font-weight:800;font-size:12px;white-space:nowrap;padding:8px 8px;text-align:center}
+.acc-corner{background:#e7ecf1}
+.acc-rlabel{background:#f2f5f8;color:var(--muted);font-weight:700;font-size:11.5px;text-align:right;white-space:nowrap;padding:6px 8px}
+.acc-table tfoot td{background:#f2f5f8;font-weight:800;color:var(--brand)}
+.acc-table tfoot th{background:#e7ecf1;color:var(--brand);font-weight:800;text-align:right}
+.acc-prod{font-weight:800;text-align:center;background:#f2f5f8;color:var(--brand)}
+.acc-prodv{font-weight:800;text-align:center;background:#fff}
+.acc-in{width:100%;min-width:64px;border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center;font-size:14px;font-weight:700;color:var(--ink)}
+.acc-in:focus{outline:none;border-color:var(--brand)}
+.acc-static{display:inline-block;min-width:40px;color:var(--muted);font-weight:800}
+.acc-num{font-weight:800;color:var(--ink)}
+.acc-grand{margin-top:6px;background:var(--brand);color:#fff;border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;font-weight:800;font-size:16px}
+.acc-grand b{font-size:20px}
+.acc-bad{background:#ffe5e5 !important}
+.acc-inbad{border-color:#e33 !important;color:#c00 !important;background:#fff5f5 !important}
+.acc-badtxt{color:#c00 !important}
+.acc-warn{margin-top:8px;background:#ffe5e5;color:#c00;border:1px solid #e33;border-radius:12px;padding:10px 12px;font-weight:800;font-size:13px}
+.acc-warn.hidden{display:none}
+.acc-rows{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.acc-line{display:flex;justify-content:space-between;align-items:center;background:#f2f5f8;border-radius:12px;padding:12px 16px;font-weight:800;font-size:15px;color:var(--muted)}
+.acc-line b{color:var(--ink);font-size:17px}
+.acc-esp{background:#e7f6ec;color:#1a7f37}
+.acc-esp b{color:#1a7f37}
+.acc-espneg{background:#ffe5e5 !important}
+.acc-espneg,.acc-espneg b{color:#c00 !important}
+
 </style>
 </head>
 <body>
@@ -462,7 +495,7 @@ ol.steps b{color:var(--ink)}
 "use strict";
 
 const DB_NAME = "drives_db";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 let _db = null;
 
 function dbOpen() {
@@ -482,6 +515,14 @@ function dbOpen() {
         const s = db.createObjectStore("bons", { keyPath: "id" });
         s.createIndex("workerId", "workerId");
         s.createIndex("date", "date");
+      }
+      if (!db.objectStoreNames.contains("sheets")) {
+        const s = db.createObjectStore("sheets", { keyPath: "id" });
+        s.createIndex("workerId", "workerId");
+        s.createIndex("date", "date");
+      }
+      if (!db.objectStoreNames.contains("prices")) {
+        db.createObjectStore("prices", { keyPath: "key" });
       }
       if (!db.objectStoreNames.contains("settings")) {
         db.createObjectStore("settings", { keyPath: "key" });
@@ -582,12 +623,19 @@ const I = {
 
 const TABS = {
   home:    { label: "الرئيسية", ico: "home" },
-  items:   { label: "البونات",  ico: "fuel" },
+  myacc:   { label: "حسابي",    ico: "fuel" },
+  items:   { label: "البونات",  ico: "photo" },
   workers: { label: "الحسابات", ico: "users",    adminOnly: true },
   settings:{ label: "الإعدادات", ico: "settings", adminOnly: true }
 };
 
-const S = { user: null, tab: "home", users: [], items: [], q: "", wf: "all", showCodes: {}, driveUrl: "", lastSync: 0 };
+// منتوجات كل جدول: pump 1 (4) و pump 2 (5)
+const PUMPS = {
+  1: ["F.S GASOIL", "V.SSP", "V.P DIESEL", "F.S SANS PLOMBE"],
+  2: ["F.S GASOIL", "V.SSP", "V.P DIESEL", "F.S SANS PLOMBE", "mélange"]
+};
+
+const S = { user: null, tab: "home", users: [], items: [], sheets: [], prices: {}, q: "", wf: "all", showCodes: {}, driveUrl: "", lastSync: 0 };
 const _turl = {};
 
 const DEFAULT_DRIVE_URL = "https://script.google.com/macros/s/AKfycbxRS9ol2Drr2NSl0HnWoiwckN4HWWmUHEb9Qbqa1olKoiYtcgQDEs_EnTbu9U3zDo4d/exec";
@@ -717,6 +765,10 @@ $("#overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") 
 async function refreshData() {
   S.users = await dbAll("users");
   S.items = await dbAll("bons");
+  S.sheets = await dbAll("sheets");
+  const pr = await dbAll("prices");
+  S.prices = {};
+  pr.forEach((p) => { S.prices[p.key] = p.value; });
   const st = await dbGet("settings", "driveUrl");
   S.driveUrl = (st && st.value) || DEFAULT_DRIVE_URL;
   const ls = await dbGet("settings", "lastSync");
@@ -962,7 +1014,7 @@ function go(tab) {
   if (TABS[tab].adminOnly && S.user.role !== "admin") tab = "home";
   S.tab = tab;
   $("#nav").querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  const renders = { home: renderHome, items: renderItems, workers: renderWorkers, settings: renderSettings };
+  const renders = { home: renderHome, myacc: renderMyAcc, items: renderItems, workers: renderWorkers, settings: renderSettings };
   renders[tab]();
 }
 
@@ -1188,11 +1240,11 @@ function openBonSheet(editItem) {
       img.src = URL.createObjectURL(_pendingPhoto);
       img.classList.remove("hidden");
       $("#photoBtn").innerHTML = I.camera + " بدّل الصورة";
-      toast("الصورة واجدة — كنقرأ الورقة...", "ok");
+      toast("الصورة واجدة", "ok");
       runOCR(f);
     } catch (err) {
       $("#photoBtn").innerHTML = I.camera + " صوّر البون";
-      toast("ما قدرنا نقرأو الصورة", "err");
+      toast("ما قدرنا نحضرو الصورة", "err");
     }
   };
 
@@ -1418,7 +1470,7 @@ function assignLine(l) {
 
 async function runOCR(file) {
   const box = $("#ocrBox");
-  box.classList.remove("hidden");
+  if (box) box.classList.add("hidden");
   const st = $("#ocrStatus");
   const bar = $("#ocrBar");
   const linesBox = $("#ocrLines");
@@ -1481,14 +1533,9 @@ async function runOCR(file) {
     if (amountVal) found.push("المبلغ");
     if (agentHit && $("#bAgent")) found.push("العامل");
     if (dateHit && $("#bDate")) found.push("التاريخ");
-    st.textContent = found.length
-      ? `لقينا: ${found.join("، ")} — تأكد و عدّل إذا حاجة غالطة`
-      : "ما عرفنا والو بضبط — اضغط على السطر المناسب باش تعويض";
-
-    linesBox.innerHTML = lines.map(l => `<button type="button" data-line="${esc(l)}">${esc(l)}</button>`).join("");
-    linesBox.querySelectorAll("[data-line]").forEach(b => b.onclick = () => assignLine(b.dataset.line));
+    if (found.length) toast("تعمّرت الخانات أوتوماتيك", "ok");
   } catch (e) {
-    st.textContent = "تعذّرت القراءة (يمكن بلا إنترنت) — عبّي يدويا";
+    /* قراءة صامتة */
   }
 }
 
@@ -1565,6 +1612,218 @@ async function flushQueue(silent) {
   }
   go(S.tab);
   if (ok) toast(`تم إرسال ${ok} بون للDrive`, "ok");
+}
+
+/* ================= حسابي (عدادات الحسابات اليومية) ================= */
+function priceKey(workerId, pump, product) { return workerId + "|" + pump + "|" + product; }
+function priceOf(workerId, pump, product) {
+  const v = S.prices[priceKey(workerId, pump, product)];
+  return v === undefined || v === null ? "" : v;
+}
+function sheetId(workerId, date) { return workerId + "_" + date; }
+function findSheet(workerId, date) { return S.sheets.find(s => s.workerId === workerId && s.date === date); }
+
+function newSheet(workerId, date) {
+  const rows = [];
+  [1, 2].forEach((pump) => {
+    PUMPS[pump].forEach((product) => {
+      const saved = priceOf(workerId, pump, product);
+      rows.push({ pump, product, prev: "", cur: "", price: saved === "" ? "" : saved, qty: 0, amount: 0 });
+    });
+  });
+  return { id: sheetId(workerId, date), workerId, date, rows, editedAt: Date.now() };
+}
+
+function sheetRows(sheet) {
+  return [1, 2].map((pump) => {
+    const rows = sheet.rows.filter(r => r.pump === pump);
+    return rows.map((r) => {
+      const hasPrev = r.prev !== "" && r.prev !== undefined && r.prev !== null;
+      const hasCur = r.cur !== "" && r.cur !== undefined && r.cur !== null;
+      const prev = Number(r.prev) || 0;
+      const cur = Number(r.cur) || 0;
+      const price = Number(r.price) || 0;
+      const qty = (hasPrev && hasCur) ? (prev - cur) : (Number(r.qty) || 0);
+      const amount = qty * price;
+      const bad = hasPrev && hasCur && (cur > prev);
+      return Object.assign({}, r, { prev, cur, price, qty, amount, bad });
+    });
+  });
+}
+
+function sheetTotals(sheet) {
+  const [p1, p2] = sheetRows(sheet);
+  const t1 = p1.reduce((s, r) => s + r.amount, 0);
+  const t2 = p2.reduce((s, r) => s + r.amount, 0);
+  return { t1, t2, general: t1 + t2 };
+}
+
+function fmtNum(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+}
+
+function renderMyAcc() {
+  const isAdmin = S.user.role === "admin";
+  const workers = S.users.filter(u => u.role !== "admin");
+  const defWorker = isAdmin ? (S.accWorker || (workers[0] && workers[0].id) || "") : S.user.id;
+  const date = S.accDate || todayISO();
+  const sheet = defWorker ? (findSheet(defWorker, date) || newSheet(defWorker, date)) : newSheet("", date);
+
+  const picker = isAdmin ? `
+    <div class="toolbar">
+      <select id="accWorkerSel">
+        ${workers.map(u => `<option value="${u.id}" ${u.id === defWorker ? "selected" : ""}>${esc(u.name)}</option>`).join("")}
+      </select>
+      <input id="accDate" type="date" value="${esc(date)}">
+    </div>` : `
+    <div class="toolbar">
+      <input id="accDate" type="date" value="${esc(date)}">
+      <span class="acc-who">${esc(S.user.name)}</span>
+    </div>`;
+
+  $("#main").innerHTML = `
+    <div class="section-head">
+      <h2>${I.fuel} حسابي${isAdmin && defWorker ? " — " + esc(userName(defWorker)) : ""}</h2>
+      <button class="btn ghost sm" id="accExport">${I.down} Excel</button>
+    </div>
+    ${picker}
+    <div id="accBody"></div>`;
+
+  const body = $("#accBody");
+  if (!defWorker) {
+    body.innerHTML = `<div class="empty">ما كاين حتى عامل. زيد عمال من "الحسابات".</div>`;
+    return;
+  }
+  body.innerHTML = pumpTable(1, sheet, isAdmin) + pumpTable(2, sheet, isAdmin) + totalCard(sheet);
+
+  const b = $("#accExport");
+  if (b) b.onclick = () => exportAccExcel(sheet);
+  const ws = $("#accWorkerSel");
+  if (ws) ws.onchange = async () => { S.accWorker = ws.value; await saveCurrentSheet(); renderMyAcc(); };
+  const ds = $("#accDate");
+  if (ds) ds.onchange = async () => { S.accDate = ds.value; await saveCurrentSheet(); renderMyAcc(); };
+
+  bindAccInputs(sheet, isAdmin);
+}
+
+function pumpTable(pump, sheet, isAdmin) {
+  const rows = sheet.rows.filter(r => r.pump === pump);
+  const computed = sheetRows(sheet)[pump - 1];
+  const head = rows.map((r) => `<th class="acc-prod">${esc(r.product)}</th>`).join("");
+
+  const numCell = (val, pump, i, field) =>
+    `<td class="${computed[i].bad ? "acc-bad" : ""}"><input class="acc-in${computed[i].bad ? " acc-inbad" : ""}" data-field="${field}" data-pump="${pump}" data-i="${i}" inputmode="decimal" value="${val === "" || val === undefined ? "" : esc(val)}" placeholder="0"></td>`;
+
+  const priceRow = rows.map((r, i) => {
+    const cell = isAdmin
+      ? `<td class="${computed[i].bad ? "acc-bad" : ""}"><input class="acc-in price${computed[i].bad ? " acc-inbad" : ""}" data-price data-pump="${pump}" data-i="${i}" inputmode="decimal" value="${r.price === "" || r.price === undefined ? "" : esc(r.price)}" placeholder="0"></td>`
+      : `<td class="${computed[i].bad ? "acc-bad" : ""}"><span class="acc-static">${r.price === "" || r.price === undefined ? "—" : esc(r.price)}</span></td>`;
+    return cell;
+  }).join("");
+
+  const prevRow = rows.map((r, i) => numCell(r.prev, pump, i, "prev")).join("");
+  const curRow = rows.map((r, i) => numCell(r.cur, pump, i, "cur")).join("");
+  const qtyRow = computed.map((c, i) => `<td class="acc-num${c.bad ? " acc-badtxt" : ""}" data-qty="${pump}-${i}">${fmtNum(c.qty)}</td>`).join("");
+  const amtRow = computed.map((c, i) => `<td class="acc-num${c.bad ? " acc-badtxt" : ""}" data-amount="${pump}-${i}">${fmtNum(c.amount)}</td>`).join("");
+  const hasBad = computed.some(c => c.bad);
+  const t = computed.reduce((s, r) => s + r.amount, 0);
+
+  return `<div class="acc-panel">
+    <h3>POMPE ${pump}</h3>
+    <div class="acc-scroll">
+      <table class="acc-table">
+        <thead><tr><th class="acc-corner"></th>${head}</tr></thead>
+        <tbody>
+          <tr><th class="acc-rlabel">العداد الثاني (الكبير)</th>${prevRow}</tr>
+          <tr><th class="acc-rlabel">العداد الأول</th>${curRow}</tr>
+          <tr><th class="acc-rlabel">الثمن (DH/L)</th>${priceRow}</tr>
+          <tr><th class="acc-rlabel">الكمية (L)</th>${qtyRow}</tr>
+          <tr><th class="acc-rlabel">المبلغ (DH)</th>${amtRow}</tr>
+        </tbody>
+        <tfoot><tr><th class="acc-rlabel">TOTAL POMPE ${pump}</th><td colspan="${rows.length}" class="acc-num${hasBad ? " acc-badtxt" : ""}" data-totalpump="${pump}">${fmtNum(t)}</td></tr></tfoot>
+      </table>
+    </div>
+    <div class="acc-warn${hasBad ? "" : " hidden"}" data-warn="${pump}">⚠️ عملية غالطة — العداد الثاني (الكبير) خاصو يكون أكبر من العداد الأول</div>
+  </div>`;
+}
+
+function bonsTotal(workerId, date) {
+  return S.items
+    .filter(d => d.workerId === workerId && d.date === date)
+    .reduce((s, d) => s + (Number(d.amount) || 0), 0);
+}
+
+function totalCard(sheet) {
+  const tt = sheetTotals(sheet);
+  const bons = bonsTotal(sheet.workerId, sheet.date);
+  const espece = tt.general - bons;
+  return `<div class="acc-grand">
+    <div><span>TOTAL GENERAL</span><b data-totalgeneral>${fmtNum(tt.general)}</b> DH</div>
+  </div>
+  <div class="acc-rows">
+    <div class="acc-line"><span>مجموع البونات</span><b>${fmtNum(bons)}</b> DH</div>
+    <div class="acc-line acc-esp${espece < 0 ? " acc-espneg" : ""}"><span>ESPECE</span><b data-espece>${fmtNum(espece)}</b> DH</div>
+  </div>`;
+}
+
+function bindAccInputs(sheet, isAdmin) {
+  const body = $("#accBody");
+  if (!body) return;
+  body.querySelectorAll("input.acc-in").forEach((inp) => {
+    inp.oninput = async () => {
+      const pump = Number(inp.dataset.pump);
+      const i = Number(inp.dataset.i);
+      const row = sheet.rows.filter(r => r.pump === pump)[i];
+      if (!row) return;
+      if (inp.classList.contains("price")) {
+        row.price = inp.value.trim();
+        await dbPut("prices", { key: priceKey(sheet.workerId, pump, row.product), value: row.price });
+        S.prices[priceKey(sheet.workerId, pump, row.product)] = row.price;
+      } else {
+        row[inp.dataset.field] = inp.value.trim();
+      }
+      sheet.editedAt = Date.now();
+      recalcAcc(sheet);
+      await dbPut("sheets", sheet);
+      const local = S.sheets.find(s => s.id === sheet.id);
+      if (local) Object.assign(local, sheet);
+      else S.sheets.push(sheet);
+    };
+  });
+}
+
+function recalcAcc(sheet) {
+  const computed = sheetRows(sheet);
+  [1, 2].forEach((pump, pi) => {
+    computed[pi].forEach((c, i) => {
+      const q = document.querySelector(`[data-qty="${pump}-${i}"]`);
+      const a = document.querySelector(`[data-amount="${pump}-${i}"]`);
+      if (q) { q.textContent = fmtNum(c.qty); q.classList.toggle("acc-badtxt", c.bad); }
+      if (a) { a.textContent = fmtNum(c.amount); a.classList.toggle("acc-badtxt", c.bad); }
+    });
+    const hasBad = computed[pi].some(c => c.bad);
+    const tp = document.querySelector(`[data-totalpump="${pump}"]`);
+    if (tp) { tp.textContent = fmtNum(computed[pi].reduce((s, r) => s + r.amount, 0)); tp.classList.toggle("acc-badtxt", hasBad); }
+    const warn = document.querySelector(`[data-warn="${pump}"]`);
+    if (warn) warn.classList.toggle("hidden", !hasBad);
+  });
+  const tt = sheetTotals(sheet);
+  const tg = document.querySelector("[data-totalgeneral]");
+  if (tg) tg.textContent = fmtNum(tt.general);
+  const esp = document.querySelector("[data-espece]");
+  if (esp) {
+    const v = tt.general - bonsTotal(sheet.workerId, sheet.date);
+    esp.textContent = fmtNum(v);
+    const wrap = esp.closest(".acc-esp");
+    if (wrap) wrap.classList.toggle("acc-espneg", v < 0);
+  }
+}
+
+async function saveCurrentSheet() {
+  const body = $("#accBody");
+  if (!body) return;
+  // sheets already saved on each input; make sure prices persist for shown values
 }
 
 /* ================= الحسابات (أدمن) ================= */
@@ -1918,6 +2177,32 @@ function exportClientsBonsExcel() {
   toast("تم تحميل بونات الزبناء", "ok");
 }
 
+function exportAccExcel(sheet) {
+  const rows = [];
+  rows.push(["حسابي", userName(sheet.workerId), "التاريخ", fmtDate(sheet.date)]);
+  rows.push([]);
+  const header = ["المنتج", "العداد الثاني (الكبير)", "العداد الأول", "الثمن (DH/L)", "الكمية (L)", "المبلغ (DH)"];
+  const computed = sheetRows(sheet);
+  [1, 2].forEach((pump, pi) => {
+    rows.push(["POMPE " + pump]);
+    rows.push(header);
+    computed[pi].forEach((c) => {
+      rows.push([c.product, c.prev, c.cur, c.price, c.qty, c.amount]);
+    });
+    const t = computed[pi].reduce((s, r) => s + r.amount, 0);
+    rows.push(["TOTAL", "", "", "", "", t]);
+    rows.push([]);
+  });
+  const tt = sheetTotals(sheet);
+  rows.push(["TOTAL GENERAL", "", "", "", "", tt.general]);
+  const bons = bonsTotal(sheet.workerId, sheet.date);
+  rows.push(["مجموع البونات", "", "", "", "", bons]);
+  rows.push(["ESPECE", "", "", "", "", tt.general - bons]);
+  const nm = userName(sheet.workerId).replace(/[^\p{L}\d]+/gu, "-") || "worker";
+  saveXlsx("حسابي-" + nm + "-" + sheet.date + ".xlsx", rows, "حسابي");
+  toast("تم تحميل حساب النهار", "ok");
+}
+
 /* ================= الإعدادات ================= */
 function renderSettings() {
   const pendN = pendingItems().length;
@@ -2097,7 +2382,9 @@ function exportJSON() {
     version: 2,
     exportedAt: new Date().toISOString(),
     users: S.users,
-    bons: S.items.map(({ photo, ...rest }) => rest)
+    bons: S.items.map(({ photo, ...rest }) => rest),
+    sheets: S.sheets,
+    prices: Object.keys(S.prices).map((k) => ({ key: k, value: S.prices[k] }))
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -2114,7 +2401,9 @@ function cloudPayload() {
     version: 2,
     updatedAt: Date.now(),
     users: S.users,
-    bons: S.items.map(({ photo, ...rest }) => rest)
+    bons: S.items.map(({ photo, ...rest }) => rest),
+    sheets: S.sheets,
+    prices: Object.keys(S.prices).map((k) => ({ key: k, value: S.prices[k] }))
   };
 }
 
@@ -2148,6 +2437,21 @@ async function mergeRemote(remote) {
     if (!local) { await dbPut("bons", Object.assign({ photo: null }, rd)); n++; }
     else if (ver(rd) > ver(local)) {
       await dbPut("bons", Object.assign({}, local, rd, { photo: local.photo }));
+      n++;
+    }
+  }
+  for (const rs of remote.sheets || []) {
+    if (!rs || !rs.id) continue;
+    const local = S.sheets.find(x => x.id === rs.id);
+    if (!local) { await dbPut("sheets", rs); n++; }
+    else if (ver(rs) > ver(local)) { await dbPut("sheets", rs); n++; }
+  }
+  for (const rp of remote.prices || []) {
+    if (!rp || !rp.key) continue;
+    const local = S.prices[rp.key];
+    if (local === undefined || local === "" || (rp.value !== undefined && rp.value !== "" && rp.value !== local)) {
+      await dbPut("prices", rp);
+      S.prices[rp.key] = rp.value;
       n++;
     }
   }
@@ -2210,6 +2514,12 @@ async function importJSON(file) {
         await dbPut("bons", d);
         n++;
       }
+    }
+    for (const s of data.sheets || []) {
+      if (s && s.id && !S.sheets.some(x => x.id === s.id)) { await dbPut("sheets", s); n++; }
+    }
+    for (const p of data.prices || []) {
+      if (p && p.key) { await dbPut("prices", p); n++; }
     }
     await refreshData();
     go(S.tab);
