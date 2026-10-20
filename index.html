@@ -336,6 +336,11 @@ ol.steps b{color:var(--ink)}
 .acc-prodv{font-weight:800;text-align:center;background:#fff}
 .acc-in{width:100%;min-width:64px;border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center;font-size:14px;font-weight:700;color:var(--ink)}
 .acc-in:focus{outline:none;border-color:var(--brand)}
+.acc-cell{display:flex;align-items:center;gap:4px}
+.acc-cell .acc-in{flex:1;min-width:52px}
+.acc-cam{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:32px;border:1px solid var(--line);border-radius:8px;background:#f2f5f8;color:var(--brand);cursor:pointer;padding:0}
+.acc-cam svg{width:17px;height:17px}
+.acc-cam:active{background:#e2e9f0}
 .acc-static{display:inline-block;min-width:40px;color:var(--muted);font-weight:800}
 .acc-num{font-weight:800;color:var(--ink)}
 .acc-grand{margin-top:6px;background:var(--brand);color:#fff;border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;font-weight:800;font-size:16px}
@@ -1539,6 +1544,55 @@ async function runOCR(file) {
   }
 }
 
+/* ===== قراءة رقم العداد من صورة (لـ حسابي) ===== */
+function onlyDigits(s) {
+  const m = String(s || "").replace(/[Oo]/g, "0").replace(/[Il|]/g, "1").match(/\d[\d\s.,]*/);
+  if (!m) return "";
+  return m[0].replace(/[\s.,]/g, "").replace(/^0+(?=\d)/, "");
+}
+
+async function ocrNumber(file) {
+  await loadTesseract();
+  const worker = await Tesseract.createWorker(["eng"], 1, {});
+  const { data } = await worker.recognize(file);
+  await worker.terminate();
+  const text = String(data.text || "");
+  const lines = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  let best = "";
+  lines.forEach((l) => {
+    const d = onlyDigits(l);
+    if (d.length >= best.length) best = d;
+  });
+  if (!best) best = onlyDigits(text);
+  return best;
+}
+
+let _numInput = null;
+function pickCounterPhoto(cb) {
+  if (!_numInput) {
+    _numInput = document.createElement("input");
+    _numInput.type = "file";
+    _numInput.accept = "image/*";
+    _numInput.capture = "environment";
+    _numInput.className = "hidden";
+    document.body.appendChild(_numInput);
+  }
+  _numInput.onchange = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    toast("كنقرأ الرقم...", "ok");
+    try {
+      const val = await ocrNumber(f);
+      if (val) cb(val);
+      else toast("ما قدرناش نقرو الرقم — دخلو يدويا", "err");
+    } catch (err) {
+      toast("تعذّرت القراءة — دخلو يدويا", "err");
+    }
+  };
+  _numInput.click();
+}
+
 /* ================= الإرسال لـ Google Drive ================= */
 function toBase64(blob) {
   return blob.arrayBuffer().then((buf) => {
@@ -1713,7 +1767,7 @@ function pumpTable(pump, sheet, isAdmin) {
   const head = rows.map((r) => `<th class="acc-prod">${esc(r.product)}</th>`).join("");
 
   const numCell = (val, pump, i, field) =>
-    `<td class="${computed[i].bad ? "acc-bad" : ""}"><input class="acc-in${computed[i].bad ? " acc-inbad" : ""}" data-field="${field}" data-pump="${pump}" data-i="${i}" inputmode="decimal" value="${val === "" || val === undefined ? "" : esc(val)}" placeholder="0"></td>`;
+    `<td class="${computed[i].bad ? "acc-bad" : ""}"><div class="acc-cell"><input class="acc-in${computed[i].bad ? " acc-inbad" : ""}" data-field="${field}" data-pump="${pump}" data-i="${i}" inputmode="decimal" value="${val === "" || val === undefined ? "" : esc(val)}" placeholder="0"><button type="button" class="acc-cam" data-cam="${field}" data-pump="${pump}" data-i="${i}" title="صوّر العداد">${I.camera}</button></div></td>`;
 
   const priceRow = rows.map((r, i) => {
     const cell = isAdmin
@@ -1789,6 +1843,27 @@ function bindAccInputs(sheet, isAdmin) {
       const local = S.sheets.find(s => s.id === sheet.id);
       if (local) Object.assign(local, sheet);
       else S.sheets.push(sheet);
+    };
+  });
+  body.querySelectorAll("button.acc-cam").forEach((btn) => {
+    btn.onclick = () => {
+      const pump = Number(btn.dataset.pump);
+      const i = Number(btn.dataset.i);
+      const field = btn.dataset.cam;
+      pickCounterPhoto(async (val) => {
+        const row = sheet.rows.filter(r => r.pump === pump)[i];
+        if (!row) return;
+        row[field] = val;
+        sheet.editedAt = Date.now();
+        const inp = body.querySelector(`input[data-field="${field}"][data-pump="${pump}"][data-i="${i}"]`);
+        if (inp) inp.value = val;
+        recalcAcc(sheet);
+        await dbPut("sheets", sheet);
+        const local = S.sheets.find(s => s.id === sheet.id);
+        if (local) Object.assign(local, sheet);
+        else S.sheets.push(sheet);
+        toast("تقرا الرقم: " + val, "ok");
+      });
     };
   });
 }
