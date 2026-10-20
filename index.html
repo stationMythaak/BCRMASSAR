@@ -107,6 +107,12 @@ svg{width:22px;height:22px;flex:none}
   padding:8px;border-radius:10px;
 }
 .link-btn:hover{background:#eef0ff}
+.rtabs{display:flex;gap:8px;margin:4px 0 14px}
+.rtab{
+  flex:1;padding:10px;border-radius:10px;font-weight:700;font-size:13.5px;
+  background:#f3f4f8;color:var(--muted);border:1.5px solid var(--line);transition:background .15s,color .15s;
+}
+.rtab.active{background:var(--brand);color:#fff;border-color:var(--brand)}
 .btn-icon{
   display:inline-flex;align-items:center;justify-content:center;
   width:46px;height:46px;border-radius:12px;background:var(--grad);color:#fff;
@@ -291,6 +297,7 @@ ol.steps{margin:0 0 14px;padding-right:20px;color:var(--muted);font-size:13.5px;
 ol.steps b{color:var(--ink)}
 
 /* ---------- Mobile ---------- */
+.nav button.nav-logout{display:none}
 @media (max-width:860px){
   .topbar{flex-wrap:wrap;padding:8px 12px;gap:8px}
   .brand-txt{display:none}
@@ -303,6 +310,8 @@ ol.steps b{color:var(--ink)}
   .nav button{flex-direction:column;gap:3px;font-size:11px;padding:6px 10px;min-width:64px}
   .nav button svg{width:21px;height:21px}
   .nav button.active{background:none;color:var(--brand);box-shadow:none}
+  .nav button.nav-logout{display:inline-flex;color:var(--danger)}
+  .userbox #logoutBtn{display:none}
   .main{padding:16px 14px calc(var(--nav-h) + 90px)}
   .fab{left:16px;bottom:calc(var(--nav-h) + 18px)}
   .uname{display:none}
@@ -341,6 +350,7 @@ ol.steps b{color:var(--ink)}
       </div>
       <p id="loginError" class="form-error hidden"></p>
       <button class="btn primary block" type="submit">دخول</button>
+      <button id="forgotBtn" class="link-btn" type="button">نسيت كلمة المرور؟</button>
       <button id="showSetup" class="link-btn hidden" type="button">إنشاء حساب المدير</button>
     </form>
 
@@ -358,9 +368,61 @@ ol.steps b{color:var(--ink)}
         <label>تأكيد الكود</label>
         <input id="setupCode2" type="password" inputmode="numeric" placeholder="عاود الكود" required>
       </div>
+      <div class="field">
+        <label>السؤال السري (لاسترجاع الكود)</label>
+        <input id="setupQuestion" placeholder="مثال: اسم أول مدير؟" required>
+      </div>
+      <div class="field">
+        <label>الجواب السري</label>
+        <input id="setupAnswer" placeholder="جوابك" required>
+      </div>
       <p id="setupError" class="form-error hidden"></p>
       <button class="btn primary block" type="submit">إنشاء الحساب</button>
       <button id="backToLogin" class="link-btn" type="button">رجوع للدخول</button>
+    </form>
+
+    <form id="recoverForm" class="form hidden">
+      <div class="setup-title">استرجاع كلمة المرور</div>
+      <div class="field">
+        <label>الاسم</label>
+        <input id="recName" placeholder="اسمك" required>
+      </div>
+
+      <div class="rtabs">
+        <button type="button" id="rtabQ" class="rtab active">السؤال السري</button>
+        <button type="button" id="rtabT" class="rtab">كود الأدمن</button>
+      </div>
+
+      <div id="recSecQ">
+        <div class="field">
+          <label>السؤال السري</label>
+          <input id="recQuestion" readonly placeholder="دخّل الاسم باش يبان السؤال">
+        </div>
+        <div class="field">
+          <label>الجواب</label>
+          <input id="recAnswer" placeholder="الجواب السري" required>
+        </div>
+      </div>
+
+      <div id="recSecT" class="hidden">
+        <p class="sub" style="margin:0 0 12px">تاصل بالأدمن، هو يولّدلك <b>كود مؤقت</b>، اكتبو هنا.</p>
+        <div class="field">
+          <label>الكود المؤقت</label>
+          <input id="recToken" inputmode="numeric" placeholder="مثال: 482913">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>كلمة المرور الجديدة</label>
+        <input id="recCode" type="password" inputmode="numeric" placeholder="4 أرقام أو أكثر" required>
+      </div>
+      <div class="field">
+        <label>تأكيد كلمة المرور</label>
+        <input id="recCode2" type="password" inputmode="numeric" placeholder="عاود الكود" required>
+      </div>
+      <p id="recoverError" class="form-error hidden"></p>
+      <button class="btn primary block" type="submit">تغيير كلمة المرور</button>
+      <button id="recoverBack" class="link-btn" type="button">رجوع للدخول</button>
     </form>
   </div>
 </section>
@@ -512,6 +574,7 @@ const I = {
   sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8"/><path d="M20 4v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 16"/><path d="M4 20v-4h4"/></svg>',
   eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg>',
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="4"/><path d="m11 11 8 8M17 17l2-2M14 14l2-2"/></svg>',
   send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10.5 13.5"/><path d="M21 3l-6.5 18-4-8-8-4z"/></svg>',
   copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>',
   photo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4.5-4.5 3 3L16 12l3 3"/></svg>'
@@ -577,6 +640,10 @@ function esc(s) {
 function normName(s) {
   return String(s || "").trim().replace(/\s+/g, " ").toLowerCase();
 }
+function normAnswer(s) {
+  return String(s || "").trim().replace(/\s+/g, " ").toLowerCase()
+    .replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي");
+}
 function todayISO() {
   const d = new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
@@ -632,12 +699,24 @@ function thumbURL(item) {
 }
 
 /* ================= الدخول ================= */
+let _bootErr = "";
+window.addEventListener("error", (e) => {
+  _bootErr = (e.message || "") + " (سطر " + e.lineno + ")";
+  console.error("[app error]", e);
+  try { toast("خطأ: " + _bootErr, "err", 9000); } catch (e2) {}
+});
+window.addEventListener("unhandledrejection", (e) => {
+  _bootErr = String((e.reason && e.reason.message) || e.reason || "مشكل مجهول");
+  console.error("[rejection]", e);
+  try { toast("خطأ: " + _bootErr, "err", 9000); } catch (e2) {}
+});
+
 async function init() {
   if (location.protocol === "file:") {
     toast("شغّل التطبيق عبر start.bat باش يخدم بشكل كامل", "err");
   }
   try { await dbOpen(); } catch (e) {
-    document.body.innerHTML = "<p style='text-align:center;margin-top:40px'>ما قدرنا نفتحو قاعدة البيانات. استعمل start.bat</p>";
+    document.body.innerHTML = "<p style='text-align:center;margin-top:40px'>ما قدرنا نفتحو قاعدة البيانات فهاد المتصفح.</p>";
     return;
   }
   await refreshData();
@@ -648,20 +727,105 @@ async function init() {
 
   if (S.users.length) showLogin();
   else showSetup();
+
+  setTimeout(() => {
+    if (!S.booted) {
+      showSetup();
+      if (_bootErr) toast("كاين مشكل فالتطبيق: " + _bootErr, "err", 10000);
+    }
+  }, 4000);
 }
 
 function showLogin() {
+  S.booted = true;
   $("#loginForm").classList.remove("hidden");
   $("#setupForm").classList.add("hidden");
+  $("#recoverForm").classList.add("hidden");
   $("#showSetup").classList.toggle("hidden", S.users.length > 0);
 }
 function showSetup() {
+  S.booted = true;
   $("#loginForm").classList.add("hidden");
   $("#setupForm").classList.remove("hidden");
+  $("#recoverForm").classList.add("hidden");
+}
+function showRecover() {
+  S.booted = true;
+  $("#loginForm").classList.add("hidden");
+  $("#setupForm").classList.add("hidden");
+  $("#recoverForm").classList.remove("hidden");
+  $("#recName").value = $("#loginName").value.trim();
+  $("#recoverError").classList.add("hidden");
+  setRecTab("q");
 }
 
 $("#showSetup").onclick = showSetup;
 $("#backToLogin").onclick = showLogin;
+$("#forgotBtn").onclick = showRecover;
+$("#recoverBack").onclick = showLogin;
+
+let _recTab = "q";
+function setRecTab(t) {
+  _recTab = t;
+  $("#rtabQ").classList.toggle("active", t === "q");
+  $("#rtabT").classList.toggle("active", t === "t");
+  $("#recSecQ").classList.toggle("hidden", t !== "q");
+  $("#recSecT").classList.toggle("hidden", t !== "t");
+  $("#recAnswer").required = t === "q";
+  $("#recToken").required = t === "t";
+  $("#recoverError").classList.add("hidden");
+}
+$("#rtabQ").onclick = () => setRecTab("q");
+$("#rtabT").onclick = () => setRecTab("t");
+
+$("#recoverForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("#recoverError");
+  err.classList.add("hidden");
+  const name = normName($("#recName").value);
+  const code = $("#recCode").value.trim();
+  const code2 = $("#recCode2").value.trim();
+  const u = S.users.find(x => normName(x.name) === name);
+  if (!u) { err.textContent = "ما لقينا حتى حساب بهاد الاسم"; err.classList.remove("hidden"); return; }
+  if (!u.active) { err.textContent = "هاد الحساب موقوف، تاصل بالأدمن"; err.classList.remove("hidden"); return; }
+
+  if (_recTab === "q") {
+    const answer = $("#recAnswer").value.trim();
+    if (!u.question || !u.answerHash) {
+      err.textContent = "هاد الحساب ما عندو سؤال سري. استعمل خيار كود الأدمن";
+      err.classList.remove("hidden"); return;
+    }
+    if (await hashText(normAnswer(answer)) !== u.answerHash) {
+      err.textContent = "الجواب السري غالط"; err.classList.remove("hidden"); return;
+    }
+  } else {
+    const token = $("#recToken").value.trim();
+    if (!u.tempTokenHash) { err.textContent = "ما كاين حتى كود مؤقت. قول للأدمن يولّدلك واحد"; err.classList.remove("hidden"); return; }
+    if (!u.tempTokenExp || Date.now() > u.tempTokenExp) { err.textContent = "الكود المؤقت فات وقته. قول للأدمن يولّد واحد جديد"; err.classList.remove("hidden"); return; }
+    if (await hashText(token) !== u.tempTokenHash) { err.textContent = "الكود المؤقت غالط"; err.classList.remove("hidden"); return; }
+  }
+
+  if (code.length < 4) { err.textContent = "الكود خاصو 4 أرقام على الأقل"; err.classList.remove("hidden"); return; }
+  if (code !== code2) { err.textContent = "الكودين ما تطابقوش"; err.classList.remove("hidden"); return; }
+  u.codeHash = await hashText(code);
+  u.tempTokenHash = "";
+  u.tempTokenExp = 0;
+  await dbPut("users", u);
+  await refreshData();
+  $("#recoverForm").reset();
+  $("#loginName").value = u.name;
+  toast("تبدل الكود — دخل دابا", "ok");
+  showLogin();
+});
+
+function updateRecQuestion() {
+  const u = S.users.find(x => normName(x.name) === normName($("#recName").value));
+  const f = $("#recQuestion");
+  if (u && u.question) f.value = u.question;
+  else f.value = "";
+}
+$("#recName").addEventListener("input", updateRecQuestion);
+$("#recName").addEventListener("change", updateRecQuestion);
 
 $("#loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -686,10 +850,14 @@ $("#setupForm").addEventListener("submit", async (e) => {
   const name = $("#setupName").value.trim();
   const code = $("#setupCode").value.trim();
   const code2 = $("#setupCode2").value.trim();
+  const question = $("#setupQuestion").value.trim();
+  const answer = $("#setupAnswer").value.trim();
   if (name.length < 2) { err.textContent = "الاسم قصير بزاف"; err.classList.remove("hidden"); return; }
   if (code.length < 4) { err.textContent = "الكود خاصو 4 أرقام على الأقل"; err.classList.remove("hidden"); return; }
   if (code !== code2) { err.textContent = "الكودين ما تطابقوش"; err.classList.remove("hidden"); return; }
-  const u = { id: uid(), name, codeHash: await hashText(code), role: "admin", active: true, createdAt: Date.now() };
+  if (question.length < 3) { err.textContent = "كتب السؤال السري"; err.classList.remove("hidden"); return; }
+  if (answer.length < 2) { err.textContent = "كتب الجواب السري"; err.classList.remove("hidden"); return; }
+  const u = { id: uid(), name, codeHash: await hashText(code), question, answerHash: await hashText(normAnswer(answer)), role: "admin", active: true, createdAt: Date.now() };
   await dbPut("users", u);
   await refreshData();
   localStorage.setItem("uid", u.id);
@@ -700,6 +868,7 @@ $("#setupForm").addEventListener("submit", async (e) => {
 
 async function enterApp(u) {
   S.user = u;
+  S.booted = true;
   $("#authView").classList.add("hidden");
   $("#appView").classList.remove("hidden");
   $("#userName").textContent = u.name;
@@ -722,8 +891,18 @@ $("#logoutBtn").onclick = () => {
 function renderNav() {
   $("#nav").innerHTML = Object.entries(TABS)
     .filter(([, t]) => !t.adminOnly || S.user.role === "admin")
-    .map(([k, t]) => `<button data-tab="${k}">${I[t.ico]}<span>${t.label}</span></button>`).join("");
-  $("#nav").querySelectorAll("button").forEach(b => b.onclick = () => go(b.dataset.tab));
+    .map(([k, t]) => `<button data-tab="${k}">${I[t.ico]}<span>${t.label}</span></button>`).join("")
+    + `<button data-tab="logout" class="nav-logout">${I.logout}<span>خروج</span></button>`;
+  $("#nav").querySelectorAll("button").forEach(b => b.onclick = () => {
+    if (b.dataset.tab === "logout") {
+      if (confirm("واش متأكد بغيتي تخرج؟")) {
+        localStorage.removeItem("uid");
+        location.reload();
+      }
+      return;
+    }
+    go(b.dataset.tab);
+  });
 }
 function go(tab) {
   if (TABS[tab].adminOnly && S.user.role !== "admin") tab = "home";
@@ -972,9 +1151,10 @@ function openBonSheet(editItem) {
     const dup = findDuplicate(client, amount, date, S.user.id, _pendingHash, isEdit ? editItem.id : null);
     if (dup) {
       const it = dup.item;
-      const desc = dup.type === "logic"
-        ? `كاين بون مسجل عندك بنفس الاسم والمبلغ والتاريخ:\n«${it.client || "بون"}» — ${fmtAmt(it.amount)} دج — ${fmtDate(it.date)}`
-        : `كاين بون بتصويرة شبه بالضبط لهادي:\n«${it.client || "بون"}» — ${fmtAmt(it.amount)} دج — ${fmtDate(it.date)}`;
+      const sameDay = it.client && normName(it.client) === normName(client) && (Number(it.amount) || 0) === amount && it.date === date;
+      const desc = sameDay
+        ? `هاد البون كيبان مصوّر من قبل:\n«${it.client}» — ${fmtAmt(it.amount)} دج — ${fmtDate(it.date)}\n\nإلا كان بون جديد بنفس المبلغ، زيدو عادي.`
+        : `كاين بون بتصويرة شبه بالضبط لهذي:\n«${it.client || "بون"}» — ${fmtAmt(it.amount)} دج — ${fmtDate(it.date)}`;
       if (!confirm(desc + "\n\nواش فعلا بون آخر و بغيتي تزيدو؟")) {
         toast("تم الإلغاء — البون موجود من قبل", "err");
         return;
@@ -1083,15 +1263,8 @@ function hamming(a, b) {
 }
 
 function findDuplicate(client, amount, date, workerId, hash, excludeId) {
-  const logic = S.items.find(d =>
-    d.id !== excludeId &&
-    d.workerId === workerId &&
-    normName(d.client) === normName(client) &&
-    (Number(d.amount) || 0) === amount &&
-    d.date === date);
-  if (logic) return { type: "logic", item: logic };
   if (hash) {
-    const sim = S.items.find(d => d.id !== excludeId && d.photoHash && hamming(d.photoHash, hash) <= 12);
+    const sim = S.items.find(d => d.id !== excludeId && d.photoHash && hamming(d.photoHash, hash) <= 6);
     if (sim) return { type: "photo", item: sim };
   }
   return null;
@@ -1263,8 +1436,14 @@ function toBase64(blob) {
 function slugName(s) {
   return String(s || "bon").replace(/[^\p{L}\d]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 30) || "bon";
 }
+function capSlug(s) {
+  return String(s || "autre").replace(/[^\p{L}\d]+/gu, "-").replace(/^-+|-+$/g, "").toUpperCase().slice(0, 30) || "autre";
+}
+function dhDate(iso) {
+  return String(iso || todayISO()).replace(/[^\d]/g, "").slice(0, 8);
+}
 function bonFileName(item) {
-  return `BON_${item.date}_${slugName(item.client)}_${item.amount || 0}_${item.id.slice(-4)}.jpg`;
+  return `${slugName(item.client || "bon")}_${capSlug(item.workerName || userName(item.workerId))}_${item.amount || 0}dh_${dhDate(item.date)}.jpg`;
 }
 
 async function sendOne(item) {
@@ -1287,7 +1466,7 @@ async function sendOne(item) {
         mime: "image/jpeg",
         month: day.slice(0, 7),
         day: day,
-        worker: item.workerName || userName(item.workerId)
+        worker: capSlug(item.workerName || userName(item.workerId))
       })
     });
     const data = await res.json();
@@ -1343,6 +1522,7 @@ function renderWorkers() {
         </div>
         <div class="wact">
           <button class="btn-icon ghost sm" data-show="${u.id}" title="إظهار/إخفاء الكود">${I.eye}</button>
+          <button class="btn-icon ghost sm" data-token="${u.id}" title="كود استرجاع مؤقت">${I.key}</button>
           <button class="btn-icon ghost sm" data-edit="${u.id}" title="تعديل">${I.edit}</button>
           <button class="btn-icon ${u.active ? "danger" : "ghost"} sm" data-toggle="${u.id}" title="${u.active ? "إيقاف" : "تفعيل"}">${I.lock}</button>
         </div>
@@ -1368,6 +1548,27 @@ function renderWorkers() {
     const u = S.users.find(x => x.id === b.dataset.edit);
     if (u) openWorkerSheet(u);
   });
+  list.querySelectorAll("[data-token]").forEach(b => b.onclick = () => {
+    const u = S.users.find(x => x.id === b.dataset.token);
+    if (u) genTempToken(u);
+  });
+}
+
+async function genTempToken(u) {
+  const tok = String(Math.floor(100000 + Math.random() * 900000));
+  u.tempTokenHash = await hashText(tok);
+  u.tempTokenExp = Date.now() + 10 * 60 * 1000;
+  await dbPut("users", u);
+  await refreshData();
+  const out = new Date(u.tempTokenExp);
+  const hh = String(out.getHours()).padStart(2, "0");
+  const mm = String(out.getMinutes()).padStart(2, "0");
+  openSheet("كود استرجاع مؤقت", `
+    <p style="margin:0 0 10px">كود مؤقت لـ <b>${esc(u.name)}</b>. صالح حتى <b>${hh}:${mm}</b> و لمرة واحدة.</p>
+    <div class="codebox" style="font-size:26px;text-align:center;letter-spacing:4px">${tok}</div>
+    <p style="color:var(--muted);font-size:13px">عطيه للعامل، هو يدخّلو فـ "نسيت كلمة المرور؟ ← كود الأدمن".</p>
+    <div class="sheet-actions"><button type="button" class="btn primary" data-cancel>تمام</button></div>`);
+  $("#sheet [data-cancel]").onclick = closeSheet;
 }
 
 function openWorkerSheet(worker) {
@@ -1378,6 +1579,10 @@ function openWorkerSheet(worker) {
         <input id="wName" required value="${worker ? esc(worker.name) : ""}" placeholder="مثال: كريم"></div>
       ${worker ? "" : `<div class="field"><label>الكود (العامل يدخل بيه)</label>
         <input id="wCode" required value="${code}" inputmode="numeric"></div>`}
+      <div class="field"><label>السؤال السري (للاسترجاع)</label>
+        <input id="wQuestion" value="${worker ? esc(worker.question || "") : ""}" placeholder="مثال: اسم أول مدير؟"></div>
+      <div class="field"><label>الجواب السري${worker ? " (خليه فارغ إلا ما بدلتوش)" : ""}</label>
+        <input id="wAnswer" placeholder="الجواب"></div>
       <p id="wError" class="form-error hidden"></p>
       <div class="sheet-actions">
         <button type="button" class="btn ghost" data-cancel>إلغاء</button>
@@ -1390,17 +1595,31 @@ function openWorkerSheet(worker) {
     const err = $("#wError");
     err.classList.add("hidden");
     const name = $("#wName").value.trim();
+    const question = $("#wQuestion").value.trim();
+    const answer = $("#wAnswer").value.trim();
     if (name.length < 2) { err.textContent = "الاسم قصير بزاف"; err.classList.remove("hidden"); return; }
     const dup = S.users.find(u => normName(u.name) === normName(name) && u.id !== (worker && worker.id));
     if (dup) { err.textContent = "كاين عامل بنفس الاسم"; err.classList.remove("hidden"); return; }
     if (worker) {
-      worker.name = name;
-      await dbPut("users", worker);
+      if (question) {
+        if (answer && answer.length < 2) { err.textContent = "الجواب قصير بزاف"; err.classList.remove("hidden"); return; }
+        worker.name = name;
+        worker.question = question;
+        if (answer) worker.answerHash = await hashText(normAnswer(answer));
+        await dbPut("users", worker);
+      } else {
+        worker.name = name;
+        worker.question = "";
+        worker.answerHash = "";
+        await dbPut("users", worker);
+      }
       toast("تم التعديل", "ok");
     } else {
       const c = $("#wCode").value.trim();
       if (c.length < 4) { err.textContent = "الكود خاصو 4 أرقام على الأقل"; err.classList.remove("hidden"); return; }
-      const u = { id: uid(), name, codeHash: await hashText(c), role: "worker", active: true, createdAt: Date.now() };
+      if (question.length < 3) { err.textContent = "كتب السؤال السري"; err.classList.remove("hidden"); return; }
+      if (answer.length < 2) { err.textContent = "كتب الجواب السري"; err.classList.remove("hidden"); return; }
+      const u = { id: uid(), name, codeHash: await hashText(c), question, answerHash: await hashText(normAnswer(answer)), role: "worker", active: true, createdAt: Date.now() };
       await dbPut("users", u);
       toast("تمت الإضافة — كود العامل: " + c, "ok", 6000);
     }
@@ -1408,6 +1627,212 @@ function openWorkerSheet(worker) {
     closeSheet();
     renderWorkers();
   };
+}
+
+/* ================= تصدير Excel (.xlsx بدون مكتبات) ================= */
+let _crcT = null;
+function crcTable() {
+  if (_crcT) return _crcT;
+  _crcT = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    _crcT[n] = c >>> 0;
+  }
+  return _crcT;
+}
+function crc32(u8) {
+  const t = crcTable();
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < u8.length; i++) c = t[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function zipStore(files) {
+  const enc = (s) => new TextEncoder().encode(s);
+  const parts = [], central = [];
+  let offset = 0;
+  const DOS_TIME = 0, DOS_DATE = 23585;
+  for (const f of files) {
+    const nameU8 = enc(f.n);
+    const crc = crc32(f.d);
+    const lh = new Uint8Array(30 + nameU8.length);
+    const dv = new DataView(lh.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 0x0800, true);
+    dv.setUint16(8, 0, true);
+    dv.setUint16(10, DOS_TIME, true);
+    dv.setUint16(12, DOS_DATE, true);
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, f.d.length, true);
+    dv.setUint32(22, f.d.length, true);
+    dv.setUint16(26, nameU8.length, true);
+    dv.setUint16(28, 0, true);
+    lh.set(nameU8, 30);
+    parts.push(lh, f.d);
+    const ch = new Uint8Array(46 + nameU8.length);
+    const cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, DOS_TIME, true);
+    cv.setUint16(14, DOS_DATE, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, f.d.length, true);
+    cv.setUint32(24, f.d.length, true);
+    cv.setUint16(28, nameU8.length, true);
+    cv.setUint32(42, offset, true);
+    ch.set(nameU8, 46);
+    central.push(ch);
+    offset += lh.length + f.d.length;
+  }
+  let cdSize = 0;
+  central.forEach((c) => { cdSize += c.length; });
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, offset, true);
+  const all = parts.concat(central, [eocd]);
+  let total = 0;
+  all.forEach((a) => { total += a.length; });
+  const out = new Uint8Array(total);
+  let p = 0;
+  all.forEach((a) => { out.set(a, p); p += a.length; });
+  return out;
+}
+function colRef(i) {
+  let s = "";
+  i++;
+  while (i > 0) {
+    const m = (i - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    i = Math.floor((i - 1) / 26);
+  }
+  return s;
+}
+function xmlEsc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+}
+function sheetXml(rows) {
+  let x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  rows.forEach((row, ri) => {
+    x += `<row r="${ri + 1}">`;
+    row.forEach((val, ci) => {
+      if (val === null || val === undefined || val === "") return;
+      const ref = colRef(ci) + (ri + 1);
+      if (typeof val === "number" && isFinite(val)) {
+        x += `<c r="${ref}"><v>${val}</v></c>`;
+      } else {
+        x += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(val)}</t></is></c>`;
+      }
+    });
+    x += "</row>";
+  });
+  return x + "</sheetData></worksheet>";
+}
+function saveXlsx(filename, rows, sheetName) {
+  const enc = (s) => new TextEncoder().encode(s);
+  const CT = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+    '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+    "</Types>";
+  const RELS = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+    "</Relationships>";
+  const WB = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    `<sheets><sheet name="${xmlEsc(sheetName || "بيانات")}" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+  const WBRELS = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+    "</Relationships>";
+  const zip = zipStore([
+    { n: "[Content_Types].xml", d: enc(CT) },
+    { n: "_rels/.rels", d: enc(RELS) },
+    { n: "xl/workbook.xml", d: enc(WB) },
+    { n: "xl/_rels/workbook.xml.rels", d: enc(WBRELS) },
+    { n: "xl/worksheets/sheet1.xml", d: enc(sheetXml(rows)) }
+  ]);
+  const blob = new Blob([zip], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+function exportWorkersExcel() {
+  const rows = [["الاسم", "الحالة", "عدد البونات", "مبلغ الكريدي (دج)", "آخر بون"]];
+  S.users.filter(u => u.role !== "admin").forEach((u) => {
+    const list = sortedItems(S.items.filter((d) => d.workerId === u.id));
+    const amt = list.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+    rows.push([u.name, u.active ? "نشيط" : "موقوف", list.length, amt, list.length ? fmtDate(list[0].date) : ""]);
+  });
+  if (rows.length === 1) rows.push(["—", "—", 0, 0, ""]);
+  saveXlsx("عمال-المحطة-" + todayISO() + ".xlsx", rows, "العمال");
+  toast("تم تحميل ملف العمال", "ok");
+}
+
+function clientsAgg() {
+  const map = new Map();
+  S.items.forEach((d) => {
+    const k = normName(d.client);
+    if (!k) return;
+    if (!map.has(k)) map.set(k, { name: d.client, n: 0, amt: 0, first: d.date, last: d.date });
+    const c = map.get(k);
+    c.n++;
+    c.amt += Number(d.amount) || 0;
+    if (d.date < c.first) c.first = d.date;
+    if (d.date > c.last) c.last = d.date;
+  });
+  return [...map.values()].sort((a, b) => b.amt - a.amt);
+}
+
+function exportClientsExcel() {
+  const rows = [["الزبون", "عدد البونات", "المجموع (دج)", "أول بون", "آخر بون"]];
+  clientsAgg().forEach((c) => rows.push([c.name, c.n, c.amt, fmtDate(c.first), fmtDate(c.last)]));
+  if (rows.length === 1) rows.push(["—", 0, 0, "", ""]);
+  saveXlsx("الزبناء-" + todayISO() + ".xlsx", rows, "الزبناء");
+  toast("تم تحميل ملف الزبناء", "ok");
+}
+
+function statusLabel(d) { return d.status === "sent" ? "مرسل" : "قيد الإرسال"; }
+
+function exportWorkersBonsExcel() {
+  const rows = [["التاريخ", "العامل", "الزبون", "المبلغ (دج)", "اسم العامل فالبون", "ملاحظات", "الحالة"]];
+  const workers = S.users.filter((u) => u.role !== "admin");
+  workers.forEach((u) => {
+    sortedItems(S.items.filter((d) => d.workerId === u.id)).forEach((d) => {
+      rows.push([fmtDate(d.date), u.name, d.client || "", Number(d.amount) || 0, d.agentName || "", d.notes || "", statusLabel(d)]);
+    });
+  });
+  if (rows.length === 1) rows.push(["—", "—", "—", 0, "", "", ""]);
+  saveXlsx("بونات-العمال-" + todayISO() + ".xlsx", rows, "بونات العمال");
+  toast("تم تحميل بونات العمال", "ok");
+}
+
+function exportClientsBonsExcel() {
+  const rows = [["التاريخ", "الزبون", "العامل", "المبلغ (دج)", "اسم العامل فالبون", "ملاحظات", "الحالة"]];
+  [...S.items].sort((a, b) => normName(a.client).localeCompare(normName(b.client)) || (b.createdAt || 0) - (a.createdAt || 0))
+    .forEach((d) => {
+      rows.push([fmtDate(d.date), d.client || "", userName(d.workerId), Number(d.amount) || 0, d.agentName || "", d.notes || "", statusLabel(d)]);
+    });
+  if (rows.length === 1) rows.push(["—", "—", "—", 0, "", "", ""]);
+  saveXlsx("بونات-الزبناء-" + todayISO() + ".xlsx", rows, "بونات الزبناء");
+  toast("تم تحميل بونات الزبناء", "ok");
 }
 
 /* ================= الإعدادات ================= */
@@ -1418,10 +1843,10 @@ function renderSettings() {
       <h3>${I.sync} ربط Google Drive</h3>
       <p>كل بون كيمشي لدوسي منظم فالجوجل درايف ديالك: <b>الشهر ← النهار ← العامل</b>.</p>
       <div class="codebox" style="direction:ltr;max-height:none">BONS-CREDIT/
-  2026-10/              (الشهر)
-    2026-10-20/         (النهار)
-      كريم/             (العامل)
-        BON_2026-10-20_كريم_1500_ab12.jpg</div>
+  2026-09/              (الشهر)
+    2026-09-22/         (النهار)
+      YOUSSEF/          (العامل)
+        barj al Amal sarl_YOUSSEF_1000dh_20260922.jpg</div>
       <p style="margin-top:12px">خاصة مرة وحدة تدير هاد الإعدادات:</p>
       <ol class="steps">
         <li>افتح <b>script.google.com</b> و سجل بحساب Google</li>
@@ -1446,6 +1871,17 @@ function renderSettings() {
       <div class="row">
         <button class="btn primary" id="exportBtn">${I.down} تصدير</button>
         <button class="btn ghost" id="importBtn">${I.up} استيراد</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>تصدير Excel</h3>
+      <p>حمّل قوائم العمال و الزبناء و البونات كملفات <b>.xlsx</b> كتحل نيشان فـ Excel أو Google Sheets.</p>
+      <div class="row">
+        <button class="btn primary" id="xWorkers">${I.down} العمال (ملخص)</button>
+        <button class="btn primary" id="xClients">${I.down} الزبناء (ملخص)</button>
+        <button class="btn ghost" id="xWorkersBons">${I.down} بونات العمال</button>
+        <button class="btn ghost" id="xClientsBons">${I.down} بونات الزبناء</button>
       </div>
     </div>
 
@@ -1475,6 +1911,11 @@ function renderSettings() {
       <p>مسح كلشي: العمال، البونات، والإعدادات. ما يمكنش تراجع.</p>
       <button class="btn danger" id="wipeBtn">${I.trash} مسح كل البيانات</button>
     </div>`;
+
+  $("#xWorkers").onclick = exportWorkersExcel;
+  $("#xClients").onclick = exportClientsExcel;
+  $("#xWorkersBons").onclick = exportWorkersBonsExcel;
+  $("#xClientsBons").onclick = exportClientsBonsExcel;
 
   $("#copyCode").onclick = async () => {
     try {
@@ -1609,7 +2050,11 @@ _photoInput.id = "photoInput";
 _photoInput.className = "hidden";
 document.body.appendChild(_photoInput);
 
-init();
+init().catch((e) => {
+  console.error("[init]", e);
+  try { showSetup(); } catch (e2) {}
+  try { toast("خطأ فالبداية: " + (e && e.message), "err", 10000); } catch (e2) {}
+});
 
 </script>
 </body>
