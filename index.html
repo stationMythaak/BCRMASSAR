@@ -8,9 +8,310 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>بونات الكريدي — محطة الوقود</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f4f5fb;
+  --card:#ffffff;
+  --ink:#1c2033;
+  --muted:#6b7190;
+  --brand:#4f46e5;
+  --brand2:#7c3aed;
+  --grad:linear-gradient(135deg,#4f46e5,#7c3aed);
+  --ok:#16a34a;
+  --warn:#d97706;
+  --danger:#e11d48;
+  --line:#e6e8f2;
+  --shadow:0 10px 30px rgba(28,32,51,.08);
+  --shadow-lg:0 20px 50px rgba(28,32,51,.16);
+  --r:16px;
+  --nav-h:64px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:"Segoe UI",Tahoma,"Noto Sans Arabic","Arial",system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);
+  -webkit-tap-highlight-color:transparent;
+  min-height:100vh;
+}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;font-size:16px;color:var(--ink)}
+svg{width:22px;height:22px;flex:none}
+
+/* ---------- Toast ---------- */
+.toast{
+  position:fixed;top:18px;left:50%;transform:translateX(-50%);
+  background:#1c2033;color:#fff;padding:12px 20px;border-radius:999px;
+  box-shadow:var(--shadow-lg);z-index:999;font-size:14.5px;max-width:92vw;text-align:center;
+  animation:toastIn .25s ease;
+}
+.toast.ok{background:var(--ok)}
+.toast.err{background:var(--danger)}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* ---------- Auth ---------- */
+.auth{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;padding:24px;
+  background:linear-gradient(160deg,#eef0ff 0%,#f7f5ff 50%,#f4f5fb 100%);
+}
+.auth-blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.35;pointer-events:none}
+.b1{width:340px;height:340px;background:#4f46e5;top:-80px;right:-60px}
+.b2{width:300px;height:300px;background:#7c3aed;bottom:-90px;left:-70px}
+.auth-card{
+  position:relative;width:100%;max-width:420px;background:var(--card);
+  border-radius:24px;box-shadow:var(--shadow-lg);padding:34px 28px 28px;text-align:center;
+}
+.auth-logo{
+  width:74px;height:74px;margin:0 auto 14px;border-radius:22px;background:var(--grad);
+  color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 26px rgba(79,70,229,.35);
+}
+.auth-logo svg{width:38px;height:38px}
+.auth-card h1{margin:0 0 6px;font-size:24px}
+.auth-card .sub{margin:0 0 22px;color:var(--muted);font-size:14px}
+
+/* ---------- Forms ---------- */
+.form{text-align:right}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13.5px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.field input,.field textarea,.field select{
+  width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;
+  background:#fbfbfe;outline:none;transition:border-color .15s, box-shadow .15s;
+}
+.field input:focus,.field textarea:focus,.field select:focus{
+  border-color:var(--brand);box-shadow:0 0 0 3px rgba(79,70,229,.12);background:#fff;
+}
+.field textarea{min-height:78px;resize:vertical}
+.inputrow{display:flex;gap:8px;align-items:stretch}
+.inputrow input{flex:1}
+.form-error{color:var(--danger);font-size:13.5px;margin:0 0 12px}
+.setup-title{font-weight:700;margin-bottom:14px;font-size:16px;text-align:center}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 20px;border-radius:12px;font-size:15px;font-weight:700;transition:transform .1s, filter .15s, background .15s;
+}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--grad);color:#fff;box-shadow:0 8px 20px rgba(79,70,229,.28)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{border:1.5px solid var(--line);background:#fff;color:var(--ink)}
+.btn.ghost:hover{background:#f6f7fc}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.block{width:100%}
+.btn.sm{padding:8px 14px;font-size:13.5px;border-radius:10px}
+.link-btn{
+  display:block;width:100%;margin-top:14px;color:var(--brand);font-weight:700;font-size:14px;
+  padding:8px;border-radius:10px;
+}
+.link-btn:hover{background:#eef0ff}
+.btn-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:46px;height:46px;border-radius:12px;background:var(--grad);color:#fff;
+  box-shadow:0 6px 16px rgba(79,70,229,.28);transition:transform .1s,filter .15s;
+}
+.btn-icon:active{transform:scale(.93)}
+.btn-icon.ghost{background:#eef0ff;color:var(--brand);box-shadow:none;border:1.5px solid var(--line)}
+.btn-icon.danger{background:#ffe4ea;color:var(--danger);box-shadow:none}
+.btn-icon.sm{width:38px;height:38px;border-radius:10px}
+.btn-icon.sm svg{width:18px;height:18px}
+
+/* ---------- App layout ---------- */
+.topbar{
+  position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;padding:10px 18px;min-height:64px;
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px}
+.brand-ico{
+  width:38px;height:38px;border-radius:12px;background:var(--grad);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+}
+.brand-ico svg{width:22px;height:22px}
+.nav{display:flex;gap:6px;flex:1;justify-content:center}
+.nav button{
+  display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:999px;
+  color:var(--muted);font-weight:700;font-size:14px;transition:background .15s,color .15s;
+}
+.nav button svg{width:19px;height:19px}
+.nav button:hover{background:#eef0ff;color:var(--brand)}
+.nav button.active{background:var(--grad);color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.28)}
+.userbox{display:flex;align-items:center;gap:8px}
+.uname{font-weight:700;font-size:14px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{
+  background:#eef0ff;color:var(--brand);font-size:11.5px;font-weight:800;
+  padding:4px 10px;border-radius:999px;
+}
+.badge.admin{background:#fef3c7;color:#b45309}
+
+.main{max-width:1000px;margin:0 auto;padding:22px 18px 110px}
+
+/* ---------- Stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px}
+.stat{
+  background:var(--card);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);
+  border:1px solid var(--line);position:relative;overflow:hidden;
+}
+.stat::before{content:"";position:absolute;top:0;right:0;width:5px;height:100%;background:var(--grad)}
+.stat .v{font-size:28px;font-weight:800;line-height:1.2}
+.stat .l{color:var(--muted);font-size:13px;margin-top:4px;font-weight:600}
+
+/* ---------- Section ---------- */
+.section{margin-bottom:24px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.section-head h2{margin:0;font-size:17px}
+
+/* ---------- Drive cards ---------- */
+.dlist{display:flex;flex-direction:column;gap:10px}
+.dcard{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
+}
+.dcard-main{flex:1;min-width:0}
+.dcard-main h3{margin:0 0 3px;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dcard-main p{margin:0 0 6px;color:var(--muted);font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dcard-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);font-weight:600}
+.dcard-meta span{display:inline-flex;align-items:center;gap:5px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--brand2)}
+.empty{
+  background:var(--card);border:2px dashed var(--line);border-radius:var(--r);
+  padding:34px 18px;text-align:center;color:var(--muted);font-size:14.5px;
+}
+
+/* ---------- Toolbar ---------- */
+.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar .search{
+  flex:1;min-width:200px;display:flex;align-items:center;gap:8px;
+  background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:0 12px;
+}
+.toolbar .search svg{color:var(--muted);width:19px;height:19px}
+.toolbar .search input{border:none;background:none;outline:none;padding:12px 0;flex:1}
+.toolbar select{
+  background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;outline:none;
+}
+
+/* ---------- Workers ---------- */
+.wrow{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:13px 15px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
+}
+.avatar{
+  width:44px;height:44px;border-radius:14px;background:var(--grad);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex:none;
+}
+.wrow.off .avatar{background:#c9cddc;color:#7d8299}
+.wrow.off .winfo b{color:var(--muted);text-decoration:line-through}
+.winfo{flex:1;min-width:0}
+.winfo b{display:block;font-size:15.5px}
+.winfo small{color:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:.5px}
+.wact{display:flex;gap:6px}
+
+/* ---------- Settings ---------- */
+.panel{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:18px;box-shadow:var(--shadow);margin-bottom:14px;
+}
+.panel h3{margin:0 0 6px;font-size:15.5px}
+.panel p{margin:0 0 14px;color:var(--muted);font-size:13.5px;line-height:1.6}
+.panel .row{display:flex;gap:10px;flex-wrap:wrap}
+.info-line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.info-line:last-child{border-bottom:none}
+.info-line b{font-weight:700}
+
+/* ---------- FAB ---------- */
+.fab{
+  position:fixed;left:20px;bottom:20px;width:58px;height:58px;border-radius:50%;
+  background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 14px 30px rgba(79,70,229,.4);z-index:40;transition:transform .12s;
+}
+.fab:active{transform:scale(.92)}
+.fab svg{width:26px;height:26px}
+
+/* ---------- Sheet / Modal ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(18,20,35,.5);backdrop-filter:blur(3px);
+  z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.sheet{
+  background:var(--card);border-radius:22px;box-shadow:var(--shadow-lg);
+  width:100%;max-width:520px;max-height:88vh;overflow:auto;padding:22px;
+  animation:sheetIn .22s ease;
+}
+@keyframes sheetIn{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sheet-head h2{margin:0;font-size:18px}
+.sheet-actions{display:flex;gap:10px;margin-top:18px}
+.sheet-actions .btn{flex:1}
+
+/* ---------- OCR box ---------- */
+.ocr\boxed{
+  border:1.5px dashed var(--line);border-radius:14px;padding:12px;margin-bottom:14px;background:#fbfbfe;
+}
+.ocrbox img{width:100%;max-height:180px;object-fit:contain;border-radius:10px;background:#eceef7;margin-bottom:10px}
+.ocr-status{font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:600}
+.progress{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:10px}
+.progress i{display:block;height:100%;width:0;background:var(--grad);border-radius:99px;transition:width .2s}
+.ocr-lines{display:flex;flex-direction:column;gap:6px;max-height:150px;overflow:auto}
+.ocr-lines button{
+  text-align:right;padding:8px 10px;border-radius:9px;border:1.5px solid var(--line);
+  background:#fff;font-size:13.5px;transition:border-color .15s,background .15s;
+}
+.ocr-lines button:hover{border-color:var(--brand);background:#eef0ff}
+
+/* ---------- Bon (credit slip) ---------- */
+.thumb{
+  width:58px;height:58px;border-radius:12px;object-fit:cover;
+  background:#eceef7;flex:none;cursor:pointer;border:1px solid var(--line);
+}
+.empty-thumb{display:flex;align-items:center;justify-content:center;color:#a3a8c0}
+.empty-thumb svg{width:24px;height:24px}
+.amount{color:var(--brand);font-weight:800;white-space:nowrap}
+.st{
+  display:inline-block;font-size:11.5px;font-weight:800;
+  padding:3px 10px;border-radius:999px;margin-top:6px;
+}
+.st.pending{background:#fef3c7;color:#b45309}
+.st.sent{background:#dcfce7;color:#15803d}
+.photo-preview{
+  width:100%;max-height:220px;object-fit:contain;border-radius:12px;
+  background:#eceef7;margin-top:10px;border:1px solid var(--line);
+}
+.fullphoto{
+  width:100%;max-height:50vh;object-fit:contain;border-radius:14px;
+  background:#eceef7;margin-bottom:14px;
+}
+.codebox{
+  background:#0f1222;color:#d7dcff;border-radius:12px;padding:14px;
+  font-size:12px;direction:ltr;text-align:left;max-height:280px;overflow:auto;
+  font-family:Consolas,"Courier New",monospace;white-space:pre;user-select:all;
+}
+ol.steps{margin:0 0 14px;padding-right:20px;color:var(--muted);font-size:13.5px;line-height:1.9}
+ol.steps b{color:var(--ink)}
+
+/* ---------- Mobile ---------- */
+@media (max-width:860px){
+  .topbar{flex-wrap:wrap;padding:8px 12px;gap:8px}
+  .brand-txt{display:none}
+  .nav{
+    position:fixed;bottom:0;left:0;right:0;z-index:60;
+    background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+    display:flex;justify-content:space-around;gap:2px;
+  }
+  .nav button{flex-direction:column;gap:3px;font-size:11px;padding:6px 10px;min-width:64px}
+  .nav button svg{width:21px;height:21px}
+  .nav button.active{background:none;color:var(--brand);box-shadow:none}
+  .main{padding:16px 14px calc(var(--nav-h) + 90px)}
+  .fab{left:16px;bottom:calc(var(--nav-h) + 18px)}
+  .uname{display:none}
+  .overlay{padding:0;align-items:flex-end}
+  .sheet{max-width:none;border-radius:22px 22px 0 0;max-height:90vh;padding-bottom:calc(22px + env(safe-area-inset-bottom));animation:bottomIn .25s ease}
+  @keyframes bottomIn{from{transform:translateY(100%)}to{transform:none}}
+}
+
+</style>
 </head>
 <body>
 
@@ -95,7 +396,1221 @@
 
 <input id="importFile" type="file" accept="application/json,.json" class="hidden">
 
-<script src="js/db.js"></script>
-<script src="js/app.js"></script>
+<script>
+"use strict";
+
+const DB_NAME = "drives_db";
+const DB_VERSION = 2;
+let _db = null;
+
+function dbOpen() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains("users")) {
+        db.createObjectStore("users", { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains("drives")) {
+        const s = db.createObjectStore("drives", { keyPath: "id" });
+        s.createIndex("workerId", "workerId");
+        s.createIndex("date", "date");
+      }
+      if (!db.objectStoreNames.contains("bons")) {
+        const s = db.createObjectStore("bons", { keyPath: "id" });
+        s.createIndex("workerId", "workerId");
+        s.createIndex("date", "date");
+      }
+      if (!db.objectStoreNames.contains("settings")) {
+        db.createObjectStore("settings", { keyPath: "key" });
+      }
+    };
+    req.onsuccess = () => { _db = req.result; res(_db); };
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbAll(store) {
+  return new Promise((res, rej) => {
+    const r = _db.transaction(store).objectStore(store).getAll();
+    r.onsuccess = () => res(r.result || []);
+    r.onerror = () => rej(r.error);
+  });
+}
+
+function dbGet(store, key) {
+  return new Promise((res, rej) => {
+    const r = _db.transaction(store).objectStore(store).get(key);
+    r.onsuccess = () => res(r.result || null);
+    r.onerror = () => rej(r.error);
+  });
+}
+
+function dbPut(store, val) {
+  return new Promise((res, rej) => {
+    const r = _db.transaction(store, "readwrite").objectStore(store).put(val);
+    r.onsuccess = () => res(val);
+    r.onerror = () => rej(r.error);
+  });
+}
+
+function dbDelete(store, key) {
+  return new Promise((res, rej) => {
+    const r = _db.transaction(store, "readwrite").objectStore(store).delete(key);
+    r.onsuccess = () => res();
+    r.onerror = () => rej(r.error);
+  });
+}
+
+function dbClear(store) {
+  return new Promise((res, rej) => {
+    const r = _db.transaction(store, "readwrite").objectStore(store).clear();
+    r.onsuccess = () => res();
+    r.onerror = () => rej(r.error);
+  });
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function makeCode(len) {
+  const n = len || 5;
+  let s = "";
+  for (let i = 0; i < n; i++) s += Math.floor(Math.random() * 10);
+  return s;
+}
+
+async function hashText(str) {
+  if (window.crypto && crypto.subtle) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(str)));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  let h = 0;
+  const s = String(str);
+  for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
+  return "f" + (h >>> 0).toString(16);
+}
+
+"use strict";
+
+/* ================= أيقونات ================= */
+const I = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  fuel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="10" height="18" rx="2"/><path d="M7 7h4"/><path d="M14 9h3l3 3v6a2 2 0 0 1-4 0"/><path d="M3 21h12"/></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"/><path d="M16 5.5a3.5 3.5 0 0 1 0 6.6"/><path d="M18 14.5c2.2.7 3.5 2.4 3.5 4.5"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.2" fill="#fff"/><circle cx="15" cy="12" r="2.2" fill="#fff"/><circle cx="8" cy="17" r="2.2" fill="#fff"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>',
+  logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4"/><path d="m16 8 4 4-4 4M20 12H10"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L20 8l-4-4L4 16z"/></svg>',
+  down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>',
+  up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V9M7 13l5-5 5 5M5 4h14"/></svg>',
+  sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8"/><path d="M20 4v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 16"/><path d="M4 20v-4h4"/></svg>',
+  eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10.5 13.5"/><path d="M21 3l-6.5 18-4-8-8-4z"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>',
+  photo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4.5-4.5 3 3L16 12l3 3"/></svg>'
+};
+
+const TABS = {
+  home:    { label: "الرئيسية", ico: "home" },
+  items:   { label: "البونات",  ico: "fuel" },
+  workers: { label: "العمال",    ico: "users",    adminOnly: true },
+  settings:{ label: "الإعدادات", ico: "settings", adminOnly: true }
+};
+
+const S = { user: null, tab: "home", users: [], items: [], q: "", wf: "all", showCodes: {}, driveUrl: "" };
+const _turl = {};
+
+const APPS_SCRIPT_CODE = `function clean_(s) {
+  return String(s || "autre").replace(/[\\\\\\/:*?"<>|]/g, "_").slice(0, 80) || "autre";
+}
+
+function child_(parent, name) {
+  var it = parent.getFoldersByName(name);
+  return it.hasNext() ? it.next() : parent.createFolder(name);
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function folder_(data) {
+  var rootName = "BONS-CREDIT";
+  var it = DriveApp.getFoldersByName(rootName);
+  var root = it.hasNext() ? it.next() : DriveApp.createFolder(rootName);
+  var month = clean_(data.month || "sans-mois");
+  var day = clean_(data.day || "sans-jour");
+  var worker = clean_(data.worker || "autre");
+  return child_(child_(child_(root, month), day), worker);
+}
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    if (data.action === "ping") return json_({ ok: true });
+    var folder = folder_(data);
+    var blob = Utilities.newBlob(
+      Utilities.base64Decode(data.base64),
+      data.mime || "image/jpeg",
+      data.name
+    );
+    var file = folder.createFile(blob);
+    return json_({ ok: true, id: file.getId(), url: file.getUrl() });
+  } catch (err) {
+    return json_({ ok: false, error: String(err) });
+  }
+}`;
+
+/* ================= أدوات ================= */
+const $ = (s) => document.querySelector(s);
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, m =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+}
+function normName(s) {
+  return String(s || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function fmtDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+function monthKey(iso) { return (iso || "").slice(0, 7); }
+function fmtAmt(n) { return (Number(n) || 0).toLocaleString("fr-FR"); }
+function parseAmt(v) {
+  const x = parseFloat(String(v || "").replace(/[^\d.,-]/g, "").replace(",", "."));
+  return isNaN(x) ? 0 : x;
+}
+function toast(msg, type, ms) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "toast" + (type ? " " + type : "");
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => t.classList.add("hidden"), ms || 2600);
+}
+
+/* ================= نافذة منبثقة ================= */
+function openSheet(title, html) {
+  $("#sheet").innerHTML =
+    `<div class="sheet-head"><h2>${esc(title)}</h2><button class="btn-icon ghost sm" data-close>${I.close}</button></div>${html}`;
+  $("#overlay").classList.remove("hidden");
+  $("#sheet").querySelector("[data-close]").onclick = closeSheet;
+}
+function closeSheet() { $("#overlay").classList.add("hidden"); $("#sheet").innerHTML = ""; }
+$("#overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") closeSheet(); });
+
+/* ================= بيانات ================= */
+async function refreshData() {
+  S.users = await dbAll("users");
+  S.items = await dbAll("bons");
+  const st = await dbGet("settings", "driveUrl");
+  S.driveUrl = (st && st.value) || "";
+}
+function userName(id) {
+  const u = S.users.find(x => x.id === id);
+  return u ? u.name : "محذوف";
+}
+function myItems() {
+  if (S.user.role === "admin") return S.items;
+  return S.items.filter(d => d.workerId === S.user.id);
+}
+function pendingItems() { return S.items.filter(d => d.status !== "sent"); }
+function thumbURL(item) {
+  if (!_turl[item.id] && item.photo) _turl[item.id] = URL.createObjectURL(item.photo);
+  return _turl[item.id] || "";
+}
+
+/* ================= الدخول ================= */
+async function init() {
+  if (location.protocol === "file:") {
+    toast("شغّل التطبيق عبر start.bat باش يخدم بشكل كامل", "err");
+  }
+  try { await dbOpen(); } catch (e) {
+    document.body.innerHTML = "<p style='text-align:center;margin-top:40px'>ما قدرنا نفتحو قاعدة البيانات. استعمل start.bat</p>";
+    return;
+  }
+  await refreshData();
+
+  const saved = localStorage.getItem("uid");
+  const su = saved && S.users.find(u => u.id === saved && u.active);
+  if (su) { await enterApp(su); return; }
+
+  if (S.users.length) showLogin();
+  else showSetup();
+}
+
+function showLogin() {
+  $("#loginForm").classList.remove("hidden");
+  $("#setupForm").classList.add("hidden");
+  $("#showSetup").classList.toggle("hidden", S.users.length > 0);
+}
+function showSetup() {
+  $("#loginForm").classList.add("hidden");
+  $("#setupForm").classList.remove("hidden");
+}
+
+$("#showSetup").onclick = showSetup;
+$("#backToLogin").onclick = showLogin;
+
+$("#loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("#loginError");
+  err.classList.add("hidden");
+  const name = normName($("#loginName").value);
+  const code = $("#loginCode").value.trim();
+  const u = S.users.find(x => normName(x.name) === name);
+  if (!u) { err.textContent = "ما لقينا حتى حساب بهاد الاسم"; err.classList.remove("hidden"); return; }
+  if (!u.active) { err.textContent = "هاد الحساب موقوف، تاصل بالأدمن"; err.classList.remove("hidden"); return; }
+  const h = await hashText(code);
+  if (h !== u.codeHash) { err.textContent = "الكود غالط"; err.classList.remove("hidden"); return; }
+  localStorage.setItem("uid", u.id);
+  $("#loginForm").reset();
+  await enterApp(u);
+});
+
+$("#setupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("#setupError");
+  err.classList.add("hidden");
+  const name = $("#setupName").value.trim();
+  const code = $("#setupCode").value.trim();
+  const code2 = $("#setupCode2").value.trim();
+  if (name.length < 2) { err.textContent = "الاسم قصير بزاف"; err.classList.remove("hidden"); return; }
+  if (code.length < 4) { err.textContent = "الكود خاصو 4 أرقام على الأقل"; err.classList.remove("hidden"); return; }
+  if (code !== code2) { err.textContent = "الكودين ما تطابقوش"; err.classList.remove("hidden"); return; }
+  const u = { id: uid(), name, codeHash: await hashText(code), role: "admin", active: true, createdAt: Date.now() };
+  await dbPut("users", u);
+  await refreshData();
+  localStorage.setItem("uid", u.id);
+  $("#setupForm").reset();
+  toast("تم إنشاء حساب الأدمن", "ok");
+  await enterApp(u);
+});
+
+async function enterApp(u) {
+  S.user = u;
+  $("#authView").classList.add("hidden");
+  $("#appView").classList.remove("hidden");
+  $("#userName").textContent = u.name;
+  const b = $("#userBadge");
+  b.textContent = u.role === "admin" ? "أدمن" : "عامل";
+  b.className = "badge" + (u.role === "admin" ? " admin" : "");
+  $("#logoutBtn").innerHTML = I.logout;
+  $("#fab").innerHTML = I.plus;
+  renderNav();
+  go("home");
+  if (navigator.onLine && S.driveUrl) flushQueue(true);
+}
+
+$("#logoutBtn").onclick = () => {
+  localStorage.removeItem("uid");
+  location.reload();
+};
+
+/* ================= التنقل ================= */
+function renderNav() {
+  $("#nav").innerHTML = Object.entries(TABS)
+    .filter(([, t]) => !t.adminOnly || S.user.role === "admin")
+    .map(([k, t]) => `<button data-tab="${k}">${I[t.ico]}<span>${t.label}</span></button>`).join("");
+  $("#nav").querySelectorAll("button").forEach(b => b.onclick = () => go(b.dataset.tab));
+}
+function go(tab) {
+  if (TABS[tab].adminOnly && S.user.role !== "admin") tab = "home";
+  S.tab = tab;
+  $("#nav").querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  const renders = { home: renderHome, items: renderItems, workers: renderWorkers, settings: renderSettings };
+  renders[tab]();
+}
+
+/* ================= الرئيسية ================= */
+function statCard(v, l) { return `<div class="stat"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`; }
+
+function bonCard(d) {
+  const canDel = S.user.role === "admin" || d.workerId === S.user.id;
+  const pend = d.status !== "sent";
+  const url = thumbURL(d);
+  const thumb = url
+    ? `<img class="thumb" data-view="${d.id}" src="${url}" alt="">`
+    : `<div class="thumb empty-thumb" data-view="${d.id}">${I.photo}</div>`;
+  return `<article class="dcard">
+    ${thumb}
+    <div class="dcard-main" data-view="${d.id}" style="cursor:pointer">
+      <h3>${esc(d.client || "بون كريدي")} <span class="amount">${fmtAmt(d.amount)} دج</span></h3>
+      <div class="dcard-meta">
+        <span><i class="dot"></i>${esc(userName(d.workerId))}</span>
+        <span>${fmtDate(d.date)}</span>
+        ${d.agentName ? `<span>العامل: ${esc(d.agentName)}</span>` : ""}
+        ${d.notes ? `<span>${esc(d.notes)}</span>` : ""}
+      </div>
+      <span class="st ${pend ? "pending" : "sent"}">${pend ? "قيد الإرسال" : "مرسل للDrive"}</span>
+    </div>
+    <div class="wact">
+      ${pend ? `<button class="btn-icon ghost sm" data-send="${d.id}" title="أرسل دابا">${I.send}</button>` : ""}
+      ${canDel ? `<button class="btn-icon ghost sm" data-editbon="${d.id}" title="تعديل">${I.edit}</button>` : ""}
+      ${canDel ? `<button class="btn-icon danger sm" data-del="${d.id}" title="حذف">${I.trash}</button>` : ""}
+    </div>
+  </article>`;
+}
+
+function bindBonActions(root) {
+  root.querySelectorAll("[data-del]").forEach(b => b.onclick = async (e) => {
+    e.stopPropagation();
+    if (!confirm("واش متأكد بلي تبيح هاد البون؟")) return;
+    const id = b.dataset.del;
+    if (_turl[id]) { URL.revokeObjectURL(_turl[id]); delete _turl[id]; }
+    await dbDelete("bons", id);
+    await refreshData();
+    go(S.tab);
+    toast("تم الحذف", "ok");
+  });
+  root.querySelectorAll("[data-send]").forEach(b => b.onclick = async (e) => {
+    e.stopPropagation();
+    const item = S.items.find(x => x.id === b.dataset.send);
+    if (item) await sendOne(item);
+  });
+  root.querySelectorAll("[data-editbon]").forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    const item = S.items.find(x => x.id === b.dataset.editbon);
+    if (item) openBonSheet(item);
+  });
+  root.querySelectorAll("[data-view]").forEach(b => b.onclick = () => {
+    const item = S.items.find(x => x.id === b.dataset.view);
+    if (item) openPhotoSheet(item);
+  });
+}
+
+function openPhotoSheet(item) {
+  const url = thumbURL(item);
+  openSheet("صورة البون", `
+    ${url ? `<img class="fullphoto" src="${url}" alt="">` : `<div class="empty">ما كاين حتى صورة</div>`}
+    <div class="info-line"><span>الزبون</span><b>${esc(item.client || "—")}</b></div>
+    <div class="info-line"><span>المبلغ</span><b>${fmtAmt(item.amount)} دج</b></div>
+    <div class="info-line"><span>العامل (فالبون)</span><b>${esc(item.agentName || "—")}</b></div>
+    <div class="info-line"><span>العامل (التطبيق)</span><b>${esc(userName(item.workerId))}</b></div>
+    <div class="info-line"><span>التاريخ</span><b>${fmtDate(item.date)}</b></div>
+    <div class="info-line"><span>الحالة</span><b>${item.status === "sent" ? "مرسل للDrive" : "قيد الإرسال"}</b></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" data-editphoto="${item.id}">${I.edit} تعديل</button>
+      <button class="btn ghost" data-close2>إغلاق</button>
+    </div>`);
+  $("#sheet [data-close2]").onclick = closeSheet;
+  const eb = $("#sheet [data-editphoto]");
+  if (eb) eb.onclick = () => { closeSheet(); openPhotoEdit(item); };
+}
+
+function openPhotoEdit(item) {
+  if (S.user.role === "admin" || item.workerId === S.user.id) openBonSheet(item);
+  else toast("غير العامل صاحب البون ولا الأدمن يقدرو يعدّلو", "err");
+}
+
+function sortedItems(list) {
+  return [...list].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+function renderHome() {
+  const mine = myItems();
+  const today = todayISO();
+  const mk = monthKey(today);
+  const todayItems = mine.filter(d => d.date === today);
+  const todayAmt = todayItems.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+  const totalAmt = mine.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+  const pend = mine.filter(d => d.status !== "sent").length;
+
+  let html = `<div class="stats">
+    ${statCard(todayItems.length, "بونات اليوم")}
+    ${statCard(fmtAmt(todayAmt) + " دج", "مبلغ اليوم")}
+    ${statCard(fmtAmt(totalAmt) + " دج", "المجموع")}
+    ${statCard(pend, "قيد الإرسال")}
+  </div>`;
+
+  if (S.user.role === "admin") {
+    const top = S.users.filter(u => u.role !== "admin").map(u => {
+      const list = mine.filter(d => d.workerId === u.id);
+      return { name: u.name, n: list.length, amt: list.reduce((s, d) => s + (Number(d.amount) || 0), 0) };
+    }).filter(t => t.n).sort((a, b) => b.amt - a.amt).slice(0, 5);
+    if (top.length) {
+      html += `<div class="section"><div class="section-head"><h2>العمال (مبلغ الكريدي)</h2></div>
+        <div class="dlist">${top.map(t =>
+          `<div class="dcard"><div class="dcard-main"><h3>${esc(t.name)} <span class="amount">${fmtAmt(t.amt)} دج</span></h3>
+          <div class="dcard-meta"><span><i class="dot"></i>${t.n} بون</span></div></div></div>`).join("")}</div></div>`;
+    }
+  }
+  html += `<div class="section"><div class="section-head"><h2>آخر البونات</h2>
+    <button class="btn ghost sm" data-goto="items">${I.fuel} الكل</button></div>
+    ${bonListHTML(sortedItems(mine).slice(0, 8))}</div>`;
+
+  $("#main").innerHTML = html;
+  $("#main").querySelectorAll("[data-goto]").forEach(b => b.onclick = () => go(b.dataset.goto));
+  bindBonActions($("#main"));
+}
+
+function bonListHTML(list) {
+  if (!list.length) return `<div class="empty">ما كاين حتى بون. صوّر بون الكريدي بالزر + تحت.</div>`;
+  return `<div class="dlist">${list.map(bonCard).join("")}</div>`;
+}
+
+/* ================= البونات ================= */
+function renderItems() {
+  let list = myItems();
+  if (S.q) {
+    const q = normName(S.q);
+    list = list.filter(d =>
+      normName(d.client).includes(q) ||
+      normName(d.agentName).includes(q) ||
+      normName(d.notes).includes(q) ||
+      String(d.amount).includes(q) ||
+      normName(userName(d.workerId)).includes(q));
+  }
+  if (S.wf !== "all") list = list.filter(d => d.workerId === S.wf);
+  list = sortedItems(list);
+
+  const wfHtml = S.user.role === "admin"
+    ? `<select id="wfSel"><option value="all">كل العمال</option>${S.users.filter(u => u.role !== "admin")
+        .map(u => `<option value="${u.id}" ${S.wf === u.id ? "selected" : ""}>${esc(u.name)}</option>`).join("")}</select>`
+    : "";
+  const pendN = pendingItems().length;
+
+  $("#main").innerHTML = `
+    <div class="toolbar">
+      <label class="search">${I.search}<input id="qInput" placeholder="قلب على زبون، مبلغ، عامل..." value="${esc(S.q)}"></label>
+      ${wfHtml}
+      ${pendN ? `<button class="btn primary sm" id="sendAll">${I.send} أرسل الكل (${pendN})</button>` : ""}
+    </div>
+    <div class="section-head"><h2>البونات (${list.length})</h2></div>
+    ${bonListHTML(list)}`;
+
+  $("#qInput").oninput = (e) => { S.q = e.target.value; renderItems(); $("#qInput").focus(); $("#qInput").setSelectionRange(S.q.length, S.q.length); };
+  if (wfHtml) $("#wfSel").onchange = (e) => { S.wf = e.target.value; renderItems(); };
+  if (pendN) $("#sendAll").onclick = () => flushQueue();
+  bindBonActions($("#main"));
+}
+
+/* ================= بون جديد + كاميرا + OCR ================= */
+let _pendingPhoto = null;
+let _pendingHash = "";
+
+$("#fab").onclick = () => openBonSheet();
+
+function openBonSheet(editItem) {
+  const isEdit = !!editItem;
+  _pendingPhoto = isEdit ? editItem.photo : null;
+  _pendingHash = isEdit ? (editItem.photoHash || "") : "";
+  openSheet(isEdit ? "تعديل البون" : "بون كريدي جديد", `
+    <form id="bonForm">
+      <div class="field">
+        <label>صورة البون *</label>
+        <div class="inputrow">
+          <button type="button" id="photoBtn" class="btn ghost block">${I.camera} ${isEdit ? "بدّل الصورة" : "صوّر البون"}</button>
+        </div>
+        <img id="photoPreview" class="photo-preview ${isEdit && editItem.photo ? "" : "hidden"}" alt="" ${isEdit && editItem.photo ? `src="${thumbURL(editItem)}"` : ""}>
+      </div>
+      <div class="field">
+        <label>اسم الشركة / الزبون *</label>
+        <div class="inputrow">
+          <input id="bClient" required placeholder="اسم اللي مكتوب فالبون" value="${isEdit ? esc(editItem.client) : ""}">
+        </div>
+      </div>
+      <div id="ocrBox" class="ocrbox hidden">
+        <div id="ocrStatus" class="ocr-status"></div>
+        <div class="progress"><i id="ocrBar"></i></div>
+        <div class="ocr-lines" id="ocrLines"></div>
+      </div>
+      <div class="field"><label>المبلغ (دج) *</label>
+        <input id="bAmount" inputmode="decimal" required placeholder="مثال: 1500" value="${isEdit ? esc(editItem.amount) : ""}"></div>
+      <div class="field"><label>اسم العامل (اللي مدوّن فالبون)</label>
+        <input id="bAgent" placeholder="مثال: كريم — الاختياري"></div>
+      <div class="field"><label>ملاحظات</label><textarea id="bNotes" placeholder="اختياري">${isEdit ? esc(editItem.notes) : ""}</textarea></div>
+      <div class="field"><label>التاريخ</label><input id="bDate" type="date" value="${isEdit ? esc(editItem.date) : todayISO()}"></div>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" data-cancel>إلغاء</button>
+        <button type="submit" class="btn primary">${isEdit ? "حفظ التعديل" : "حفظ"}</button>
+      </div>
+    </form>`);
+
+  $("#sheet [data-cancel]").onclick = closeSheet;
+  $("#bAgent").value = isEdit ? (editItem.agentName || editItem.workerName || S.user.name) : S.user.name;
+  $("#photoBtn").onclick = () => $("#photoInput").click();
+
+  $("#photoInput").onchange = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    $("#photoBtn").textContent = "جاري التحميض...";
+    try {
+      _pendingPhoto = await compressImage(f);
+      _pendingHash = await photoHash(_pendingPhoto);
+      const img = $("#photoPreview");
+      img.src = URL.createObjectURL(_pendingPhoto);
+      img.classList.remove("hidden");
+      $("#photoBtn").innerHTML = I.camera + " بدّل الصورة";
+      toast("الصورة واجدة — كنقرأ الورقة...", "ok");
+      runOCR(f);
+    } catch (err) {
+      $("#photoBtn").innerHTML = I.camera + " صوّر البون";
+      toast("ما قدرنا نقرأو الصورة", "err");
+    }
+  };
+
+  $("#bonForm").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!_pendingPhoto) { toast("خاصك تصوّر البون", "err"); return; }
+    const client = $("#bClient").value.trim();
+    const amount = parseAmt($("#bAmount").value);
+    if (!client) return;
+    const date = $("#bDate").value || todayISO();
+    const dup = findDuplicate(client, amount, date, S.user.id, _pendingHash, isEdit ? editItem.id : null);
+    if (dup) {
+      const it = dup.item;
+      const desc = dup.type === "logic"
+        ? `كاين بون مسجل عندك بنفس الاسم والمبلغ والتاريخ:\n«${it.client || "بون"}» — ${fmtAmt(it.amount)} دج — ${fmtDate(it.date)}`
+        : `كاين بون بتصويرة شبه بالضبط لهادي:\n«${it.client || "بون"}» — ${fmtAmt(it.amount)} دج — ${fmtDate(it.date)}`;
+      if (!confirm(desc + "\n\nواش فعلا بون آخر و بغيتي تزيدو؟")) {
+        toast("تم الإلغاء — البون موجود من قبل", "err");
+        return;
+      }
+    }
+    let d;
+    if (isEdit) {
+      d = editItem;
+      d.client = client;
+      d.amount = amount;
+      d.agentName = $("#bAgent").value.trim();
+      d.notes = $("#bNotes").value.trim();
+      d.date = date;
+      d.photo = _pendingPhoto;
+      d.photoHash = _pendingHash;
+      d.status = "pending";
+      d.sentAt = 0;
+      d.editedAt = Date.now();
+    } else {
+      d = {
+        id: uid(),
+        workerId: S.user.id,
+        workerName: S.user.name,
+        client,
+        amount,
+        agentName: $("#bAgent").value.trim(),
+        notes: $("#bNotes").value.trim(),
+        date,
+        createdAt: Date.now(),
+        photo: _pendingPhoto,
+        photoHash: _pendingHash,
+        status: "pending",
+        sentAt: 0
+      };
+    }
+    await dbPut("bons", d);
+    await refreshData();
+    closeSheet();
+    go(S.tab);
+    toast(isEdit ? "تم التعديل و غادي يتعاود الإرسال للDrive" : "تسجل البون", "ok");
+    if (S.driveUrl && navigator.onLine) sendOne(d);
+    else if (!S.driveUrl && S.user.role === "admin") toast("زيد رابط Google Drive فالإعدادات باش يتسجلو البونات");
+  };
+}
+
+async function compressImage(file, maxW, quality) {
+  const w = maxW || 1280;
+  const q = quality || 0.72;
+  let bitmap = null;
+  try { bitmap = await createImageBitmap(file); } catch (e) { /* fallback below */ }
+  let iw, ih, draw;
+  if (bitmap) {
+    iw = bitmap.width; ih = bitmap.height;
+  } else {
+    const url = URL.createObjectURL(file);
+    const img = await new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = rej;
+      im.src = url;
+    });
+    iw = img.width; ih = img.height;
+    draw = img;
+  }
+  const scale = Math.min(1, w / Math.max(iw, ih));
+  const cw = Math.round(iw * scale), ch = Math.round(ih * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = cw; canvas.height = ch;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bitmap || draw, 0, 0, cw, ch);
+  if (bitmap) bitmap.close();
+  return await new Promise((res) => canvas.toBlob((b) => res(b), "image/jpeg", q));
+}
+
+async function photoHash(blob) {
+  let src = null, revoke = null;
+  try { src = await createImageBitmap(blob); } catch (e) {
+    revoke = URL.createObjectURL(blob);
+    src = await new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = rej;
+      im.src = revoke;
+    });
+  }
+  const c = document.createElement("canvas");
+  c.width = 16; c.height = 16;
+  const g = c.getContext("2d");
+  g.drawImage(src, 0, 0, 16, 16);
+  if (src.close) src.close();
+  if (revoke) URL.revokeObjectURL(revoke);
+  const d = g.getImageData(0, 0, 16, 16).data;
+  const gray = [];
+  for (let i = 0; i < d.length; i += 4) gray.push(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+  const mean = gray.reduce((a, b) => a + b, 0) / gray.length;
+  let bits = "";
+  for (const v of gray) bits += v >= mean ? "1" : "0";
+  return bits;
+}
+
+function hamming(a, b) {
+  if (!a || !b || a.length !== b.length) return 999;
+  let n = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++;
+  return n;
+}
+
+function findDuplicate(client, amount, date, workerId, hash, excludeId) {
+  const logic = S.items.find(d =>
+    d.id !== excludeId &&
+    d.workerId === workerId &&
+    normName(d.client) === normName(client) &&
+    (Number(d.amount) || 0) === amount &&
+    d.date === date);
+  if (logic) return { type: "logic", item: logic };
+  if (hash) {
+    const sim = S.items.find(d => d.id !== excludeId && d.photoHash && hamming(d.photoHash, hash) <= 12);
+    if (sim) return { type: "photo", item: sim };
+  }
+  return null;
+}
+
+function loadTesseract() {
+  if (window.Tesseract) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+    s.onload = res;
+    s.onerror = () => rej(new Error("تعذر تحميل محرك القراءة"));
+    document.head.appendChild(s);
+  });
+}
+
+function lineLetters(l) { return (l.match(/\p{L}/gu) || []).length; }
+function lineDigits(l) { return (l.match(/\d/g) || []).length; }
+
+function parseDateStr(l) {
+  const m = String(l).match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (!m) return null;
+  let d = parseInt(m[1], 10), mo = parseInt(m[2], 10);
+  let y = m[3];
+  if (y.length === 2) y = "20" + y;
+  if (d > 31 && mo <= 12) { const t = d; d = mo; mo = t; } // ي/m/d إذا الأول كبير
+  if (d < 1 || d > 31 || mo < 1 || mo > 12) return null;
+  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function parseAmountStr(l) {
+  const cleaned = String(l).replace(/\s/g, "");
+  const m = cleaned.match(/(\d+(?:[.,]\d{1,2})?)/);
+  return m ? m[1].replace(",", ".") : "";
+}
+
+function afterLabel(l, re) {
+  const parts = String(l).split(/[:：]/);
+  if (parts.length > 1 && parts[1].trim()) return parts[1].trim();
+  return String(l).replace(re, "").replace(/[:：]/g, "").trim();
+}
+
+const AMOUNT_HINT = /دج|درهم|dinar|montant|total|\bdh\b|\bda\b|\bdt\b|\.00\b/i;
+const AGENT_HINT = /عامل|العامل|agent|vendeur|مشرف|بون\s*[:：]/i;
+const CLIENT_HINT = /شركة|زبون|عميل|client|soci[ée]t[ée]|nom\s*client/i;
+const CLIENT_RE = /شركة|زبون|عميل|client|soci[ée]t[ée]|nom\s*client/gi;
+const AGENT_RE = /عامل|العامل|agent|vendeur|مشرف/gi;
+
+function isAgentLine(l) {
+  const t = String(l).replace(/زبون/g, "ز-بون");
+  return AGENT_HINT.test(t);
+}
+
+function isAmountLine(l) {
+  return AMOUNT_HINT.test(l) || (lineDigits(l) >= 3 && lineDigits(l) > lineLetters(l));
+}
+
+function clientValue(l) {
+  if (CLIENT_HINT.test(l) && /[:：]/.test(l)) {
+    const v = afterLabel(l, CLIENT_RE);
+    if (v && lineLetters(v) > 1) return v;
+  }
+  return String(l).replace(/[:：]$/, "").trim();
+}
+
+function assignLine(l) {
+  const ds = parseDateStr(l);
+  if (ds) { $("#bDate").value = ds; toast("تم تعويض التاريخ", "ok"); return; }
+  if (isAmountLine(l)) {
+    const a = parseAmountStr(l);
+    if (a) { $("#bAmount").value = a; toast("تم تعويض المبلغ", "ok"); return; }
+  }
+  if (isAgentLine(l)) {
+    const v = afterLabel(l, AGENT_RE);
+    if (v && lineLetters(v) > 1) { $("#bAgent").value = v; toast("تم تعويض اسم العامل", "ok"); return; }
+  }
+  if (lineLetters(l) > 1) {
+    $("#bClient").value = clientValue(l);
+    toast("تم تعويض اسم الشركة", "ok");
+    return;
+  }
+}
+
+async function runOCR(file) {
+  const box = $("#ocrBox");
+  box.classList.remove("hidden");
+  const st = $("#ocrStatus");
+  const bar = $("#ocrBar");
+  const linesBox = $("#ocrLines");
+  linesBox.innerHTML = "";
+  bar.style.width = "0%";
+  st.textContent = "جاري التحميل...";
+  try {
+    await loadTesseract();
+    st.textContent = "جاري تجهيز محرك القراءة...";
+    const worker = await Tesseract.createWorker(["ara", "eng"], 1, {
+      logger: (m) => {
+        if (m.status === "recognizing text") {
+          st.textContent = "جاري قراءة الورقة...";
+          bar.style.width = Math.round((m.progress || 0) * 100) + "%";
+        }
+      }
+    });
+    st.textContent = "جاري قراءة الورقة...";
+    const { data } = await worker.recognize(file);
+    await worker.terminate();
+    bar.style.width = "100%";
+    const lines = String(data.text || "").split(/\n+/).map(s => s.trim()).filter(s => s.length > 1);
+    if (!lines.length) { st.textContent = "ما قدرنا نقرو والو، عبّي يدويا"; return; }
+
+    // ---- التاريخ (ما نبدلوش إذا العامل بدلو باليد) ----
+    const curDate = $("#bDate").value;
+    const dateHit = lines.map(l => ({ l, d: parseDateStr(l) })).find(x => x.d);
+    if (dateHit && (!curDate || curDate === todayISO())) $("#bDate").value = dateHit.d;
+
+    // ---- المبلغ (ما نعمرش فوق حاجة مكتوبة باليد) ----
+    const curAmount = $("#bAmount").value.trim();
+    const amountHit = lines.filter(l => isAmountLine(l) && !(dateHit && l === dateHit.l))
+      .sort((a, b) => (AMOUNT_HINT.test(b) ? 1 : 0) - (AMOUNT_HINT.test(a) ? 1 : 0) || lineDigits(b) - lineDigits(a))[0];
+    const amountVal = amountHit ? parseAmountStr(amountHit) : "";
+    if (amountVal && !curAmount) $("#bAmount").value = amountVal;
+
+    // ---- اسم العامل (الختم هو الأهم، كيبدّل دائما إلا لقيناه) ----
+    const agentHit = lines.filter(l => isAgentLine(l) && !(dateHit && l === dateHit.l) && l !== amountHit)
+      .sort((a, b) => lineLetters(b) - lineLetters(a))[0];
+    if (agentHit) {
+      const v = afterLabel(agentHit, AGENT_RE);
+      if (v && lineLetters(v) > 1) $("#bAgent").value = v;
+    }
+
+    // ---- اسم الشركة (ما نعمرش فوق حاجة مكتوبة باليد) ----
+    const curClient = $("#bClient").value.trim();
+    const skip = new Set([dateHit && dateHit.l, amountHit, agentHit].filter(Boolean));
+    const clientHit = lines.filter(l => !skip.has(l) && lineLetters(l) > 2 && !isAmountLine(l))
+      .sort((a, b) => {
+        const ha = CLIENT_HINT.test(a) ? 1 : 0, hb = CLIENT_HINT.test(b) ? 1 : 0;
+        return hb - ha || b.length - a.length;
+      })[0];
+    if (clientHit && !curClient) $("#bClient").value = clientValue(clientHit);
+
+    const found = [];
+    if (clientHit) found.push("الشركة");
+    if (amountVal) found.push("المبلغ");
+    if (agentHit) found.push("العامل");
+    if (dateHit) found.push("التاريخ");
+    st.textContent = found.length
+      ? `لقينا: ${found.join("، ")} — تأكد و عدّل إذا حاجة غالطة`
+      : "ما عرفنا والو بضبط — اضغط على السطر المناسب باش تعويض";
+
+    linesBox.innerHTML = lines.map(l => `<button type="button" data-line="${esc(l)}">${esc(l)}</button>`).join("");
+    linesBox.querySelectorAll("[data-line]").forEach(b => b.onclick = () => assignLine(b.dataset.line));
+  } catch (e) {
+    st.textContent = "تعذّرت القراءة (يمكن بلا إنترنت) — عبّي يدويا";
+  }
+}
+
+/* ================= الإرسال لـ Google Drive ================= */
+function toBase64(blob) {
+  return blob.arrayBuffer().then((buf) => {
+    const bytes = new Uint8Array(buf);
+    let bin = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(bin);
+  });
+}
+function slugName(s) {
+  return String(s || "bon").replace(/[^\p{L}\d]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 30) || "bon";
+}
+function bonFileName(item) {
+  return `BON_${item.date}_${slugName(item.client)}_${item.amount || 0}_${item.id.slice(-4)}.jpg`;
+}
+
+async function sendOne(item) {
+  if (!S.driveUrl) {
+    if (S.user.role === "admin") toast("ما كاين حتى رابط Google Drive — راجع الإعدادات", "err");
+    else toast("الأدمن خاصو يدخل رابط Google Drive", "err");
+    return false;
+  }
+  if (!item.photo) return false;
+  try {
+    const base64 = await toBase64(item.photo);
+    const day = item.date || todayISO();
+    const res = await fetch(S.driveUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "upload",
+        name: bonFileName(item),
+        base64,
+        mime: "image/jpeg",
+        month: day.slice(0, 7),
+        day: day,
+        worker: item.workerName || userName(item.workerId)
+      })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "خطأ فالسيرفر");
+    item.status = "sent";
+    item.sentAt = Date.now();
+    item.driveFileId = data.id || "";
+    await dbPut("bons", item);
+    await refreshData();
+    return true;
+  } catch (e) {
+    toast("تعذر الإرسال: " + (e.message || "بلا إنترنت"), "err");
+    return false;
+  }
+}
+
+async function flushQueue(silent) {
+  const pend = pendingItems();
+  if (!pend.length) { if (!silent) toast("ما كاين حتى بون معلق", "ok"); return; }
+  if (!S.driveUrl) { if (!silent) toast("دخل رابط Google Drive فالإعدادات أولا", "err"); return; }
+  if (!silent) toast(`جاري إرسال ${pend.length} بون...`);
+  let ok = 0;
+  for (const item of sortedItems(pend)) {
+    if (await sendOne(item)) ok++;
+  }
+  go(S.tab);
+  if (ok) toast(`تم إرسال ${ok} بون للDrive`, "ok");
+}
+
+/* ================= العمال (أدمن) ================= */
+function renderWorkers() {
+  const workers = S.users.filter(u => u.role !== "admin");
+  $("#main").innerHTML = `
+    <div class="section-head">
+      <h2>عمال المحطة (${workers.length})</h2>
+      <button class="btn primary sm" id="addWorker">${I.plus} عامل جديد</button>
+    </div>
+    <div class="dlist" id="wlist"></div>`;
+
+  const list = $("#wlist");
+  if (!workers.length) {
+    list.innerHTML = `<div class="empty">ما كاين حتى عامل. زيد عمال المحطة باش يدخلو بسمهم والكود.</div>`;
+  } else {
+    list.innerHTML = workers.map(u => {
+      const mine = S.items.filter(d => d.workerId === u.id);
+      const amt = mine.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+      const shown = S.showCodes[u.id] ? "••••••" : "••••";
+      return `<div class="wrow ${u.active ? "" : "off"}">
+        <div class="avatar">${esc(u.name.trim().charAt(0) || "؟")}</div>
+        <div class="winfo">
+          <b>${esc(u.name)}</b>
+          <small>الكود: ${shown} — ${mine.length} بون — ${fmtAmt(amt)} دج</small>
+        </div>
+        <div class="wact">
+          <button class="btn-icon ghost sm" data-show="${u.id}" title="إظهار/إخفاء الكود">${I.eye}</button>
+          <button class="btn-icon ghost sm" data-edit="${u.id}" title="تعديل">${I.edit}</button>
+          <button class="btn-icon ${u.active ? "danger" : "ghost"} sm" data-toggle="${u.id}" title="${u.active ? "إيقاف" : "تفعيل"}">${I.lock}</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  $("#addWorker").onclick = () => openWorkerSheet();
+  list.querySelectorAll("[data-show]").forEach(b => b.onclick = () => {
+    S.showCodes[b.dataset.show] = !S.showCodes[b.dataset.show];
+    renderWorkers();
+  });
+  list.querySelectorAll("[data-toggle]").forEach(b => b.onclick = async () => {
+    const u = S.users.find(x => x.id === b.dataset.toggle);
+    if (!u) return;
+    u.active = !u.active;
+    await dbPut("users", u);
+    await refreshData();
+    renderWorkers();
+    toast(u.active ? "تم التفعيل" : "تم الإيقاف", "ok");
+  });
+  list.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => {
+    const u = S.users.find(x => x.id === b.dataset.edit);
+    if (u) openWorkerSheet(u);
+  });
+}
+
+function openWorkerSheet(worker) {
+  const code = worker ? "" : makeCode(5);
+  openSheet(worker ? "تعديل عامل" : "عامل جديد", `
+    <form id="workerForm">
+      <div class="field"><label>الاسم الكامل</label>
+        <input id="wName" required value="${worker ? esc(worker.name) : ""}" placeholder="مثال: كريم"></div>
+      ${worker ? "" : `<div class="field"><label>الكود (العامل يدخل بيه)</label>
+        <input id="wCode" required value="${code}" inputmode="numeric"></div>`}
+      <p id="wError" class="form-error hidden"></p>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" data-cancel>إلغاء</button>
+        <button type="submit" class="btn primary">${worker ? "حفظ" : "إضافة"}</button>
+      </div>
+    </form>`);
+  $("#sheet [data-cancel]").onclick = closeSheet;
+  $("#workerForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const err = $("#wError");
+    err.classList.add("hidden");
+    const name = $("#wName").value.trim();
+    if (name.length < 2) { err.textContent = "الاسم قصير بزاف"; err.classList.remove("hidden"); return; }
+    const dup = S.users.find(u => normName(u.name) === normName(name) && u.id !== (worker && worker.id));
+    if (dup) { err.textContent = "كاين عامل بنفس الاسم"; err.classList.remove("hidden"); return; }
+    if (worker) {
+      worker.name = name;
+      await dbPut("users", worker);
+      toast("تم التعديل", "ok");
+    } else {
+      const c = $("#wCode").value.trim();
+      if (c.length < 4) { err.textContent = "الكود خاصو 4 أرقام على الأقل"; err.classList.remove("hidden"); return; }
+      const u = { id: uid(), name, codeHash: await hashText(c), role: "worker", active: true, createdAt: Date.now() };
+      await dbPut("users", u);
+      toast("تمت الإضافة — كود العامل: " + c, "ok", 6000);
+    }
+    await refreshData();
+    closeSheet();
+    renderWorkers();
+  };
+}
+
+/* ================= الإعدادات ================= */
+function renderSettings() {
+  const pendN = pendingItems().length;
+  $("#main").innerHTML = `
+    <div class="panel">
+      <h3>${I.sync} ربط Google Drive</h3>
+      <p>كل بون كيمشي لدوسي منظم فالجوجل درايف ديالك: <b>الشهر ← النهار ← العامل</b>.</p>
+      <div class="codebox" style="direction:ltr;max-height:none">BONS-CREDIT/
+  2026-10/              (الشهر)
+    2026-10-20/         (النهار)
+      كريم/             (العامل)
+        BON_2026-10-20_كريم_1500_ab12.jpg</div>
+      <p style="margin-top:12px">خاصة مرة وحدة تدير هاد الإعدادات:</p>
+      <ol class="steps">
+        <li>افتح <b>script.google.com</b> و سجل بحساب Google</li>
+        <li>دير مشروع جديد و امسح الكود القديم</li>
+        <li>الصق الكود ديال <b>DriveUploader.gs</b> (فيه زر النساح تحت) و حفظ</li>
+        <li><b>Deploy &gt; New deployment &gt; Web app</b> — Execute as: <b>Me</b> — Access: <b>Anyone</b></li>
+        <li>نسخ الرابط اللي ينتهي بـ <b>/exec</b> و لصقه هنا تحت</li>
+      </ol>
+      <button class="btn ghost sm" id="copyCode">${I.copy} نسخ كود Apps Script</button>
+      <div class="field" style="margin-top:14px"><label>رابط Web App (/exec)</label>
+        <input id="driveUrl" dir="ltr" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.driveUrl)}"></div>
+      <div class="row">
+        <button class="btn primary" id="saveUrl">${I.down} حفظ الرابط</button>
+        <button class="btn ghost" id="testUrl">${I.send} اختبار الرابط</button>
+        ${pendN ? `<button class="btn primary" id="flushBtn">${I.sync} أرسل المعلق (${pendN})</button>` : ""}
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>النسخ الاحتياطي (بلا إنترنت)</h3>
+      <p>صدّر معلومات البونات والعمال لملف و حملو فالجهاز الآخر. <b>الصور ماشي داخلة</b> — الصور كتمشي للجوجل درايف.</p>
+      <div class="row">
+        <button class="btn primary" id="exportBtn">${I.down} تصدير</button>
+        <button class="btn ghost" id="importBtn">${I.up} استيراد</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>تغيير الكود ديالي</h3>
+      <form id="codeForm">
+        <div class="field"><label>الكود الحالي</label><input id="oldCode" type="password" inputmode="numeric" required></div>
+        <div class="field"><label>الكود الجديد</label><input id="newCode" type="password" inputmode="numeric" required></div>
+        <div class="field"><label>تأكيد الكود الجديد</label><input id="newCode2" type="password" inputmode="numeric" required></div>
+        <p id="cError" class="form-error hidden"></p>
+        <button class="btn primary" type="submit">حفظ الكود</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h3>معلومات</h3>
+      <div class="info-line"><span>المستخدم</span><b>${esc(S.user.name)}</b></div>
+      <div class="info-line"><span>الصلاحية</span><b>${S.user.role === "admin" ? "أدمن" : "عامل محطة"}</b></div>
+      <div class="info-line"><span>عدد العمال</span><b>${S.users.filter(u => u.role !== "admin").length}</b></div>
+      <div class="info-line"><span>عدد البونات</span><b>${S.items.length}</b></div>
+      <div class="info-line"><span>قيد الإرسال</span><b>${pendN}</b></div>
+      <div class="info-line"><span>حالة الإنترنت</span><b>${navigator.onLine ? "متصل" : "غير متصل — البونات كيتخزنو و يتسجلو من بعد"}</b></div>
+    </div>
+
+    <div class="panel" style="border-color:#ffd0da">
+      <h3 style="color:var(--danger)">منطقة الخطر</h3>
+      <p>مسح كلشي: العمال، البونات، والإعدادات. ما يمكنش تراجع.</p>
+      <button class="btn danger" id="wipeBtn">${I.trash} مسح كل البيانات</button>
+    </div>`;
+
+  $("#copyCode").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(APPS_SCRIPT_CODE);
+      toast("تم نسخ الكود", "ok");
+    } catch (e) {
+      openSheet("كود Apps Script", `<div class="codebox">${esc(APPS_SCRIPT_CODE)}</div>
+        <p style="color:var(--muted);font-size:13px">حدد الكود و انسخو يدويا (Ctrl+C)</p>`);
+    }
+  };
+  $("#saveUrl").onclick = async () => {
+    const v = $("#driveUrl").value.trim();
+    if (v && !/^https:\/\/script\.google\.com\//.test(v)) {
+      toast("الرابط خاصو يكون من script.google.com", "err");
+      return;
+    }
+    await dbPut("settings", { key: "driveUrl", value: v });
+    S.driveUrl = v;
+    toast("تم حفظ الرابط", "ok");
+    if (v && pendingItems().length && navigator.onLine) flushQueue();
+  };
+  $("#testUrl").onclick = async () => {
+    const v = $("#driveUrl").value.trim() || S.driveUrl;
+    if (!v) { toast("دخل الرابط أولا", "err"); return; }
+    try {
+      const res = await fetch(v, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "ping" })
+      });
+      const data = await res.json();
+      toast(data.ok ? "الرابط خدام" : "السيرفر رجع خطأ: " + (data.error || ""), data.ok ? "ok" : "err");
+    } catch (e) {
+      toast("تعذر الوصول للرابط (بلا إنترنت؟)", "err");
+    }
+  };
+  if (pendN) $("#flushBtn").onclick = () => flushQueue();
+
+  $("#exportBtn").onclick = exportJSON;
+  $("#importBtn").onclick = () => $("#importFile").click();
+  $("#importFile").onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (f) importJSON(f);
+  };
+
+  $("#codeForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const err = $("#cError");
+    err.classList.add("hidden");
+    const o = $("#oldCode").value.trim();
+    const n = $("#newCode").value.trim();
+    const n2 = $("#newCode2").value.trim();
+    if (await hashText(o) !== S.user.codeHash) { err.textContent = "الكود الحالي غالط"; err.classList.remove("hidden"); return; }
+    if (n.length < 4) { err.textContent = "الكود الجديد خاصو 4 أرقام على الأقل"; err.classList.remove("hidden"); return; }
+    if (n !== n2) { err.textContent = "الكودين ما تطابقوش"; err.classList.remove("hidden"); return; }
+    S.user.codeHash = await hashText(n);
+    await dbPut("users", S.user);
+    $("#codeForm").reset();
+    toast("تم تغيير الكود", "ok");
+  };
+
+  $("#wipeBtn").onclick = async () => {
+    if (!confirm("واش متأكد 100%؟ غادي يتمسح كلشي!")) return;
+    if (!confirm("آخر فرصة — متأكد؟")) return;
+    await dbClear("users");
+    await dbClear("bons");
+    await dbClear("drives");
+    await dbClear("settings");
+    localStorage.clear();
+    location.reload();
+  };
+}
+
+/* ================= تصدير / استيراد ================= */
+function exportJSON() {
+  const payload = {
+    app: "bons-credit",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    users: S.users,
+    bons: S.items.map(({ photo, ...rest }) => rest)
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "bons-backup-" + todayISO() + ".json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast("تم تصدير النسخة", "ok");
+}
+
+async function importJSON(file) {
+  try {
+    const data = JSON.parse(await file.text());
+    let n = 0;
+    for (const u of data.users || []) {
+      if (u && u.id && !S.users.some(x => x.id === u.id)) { await dbPut("users", u); n++; }
+    }
+    for (const d of data.bons || data.drives || []) {
+      if (d && d.id && !S.items.some(x => x.id === d.id)) {
+        d.photo = null;
+        await dbPut("bons", d);
+        n++;
+      }
+    }
+    await refreshData();
+    go(S.tab);
+    toast(n ? `تمت المزامنة: ${n} عنصر جديد` : "ما كاين حتى حاجة جديدة", n ? "ok" : "");
+  } catch (e) {
+    toast("الملف غالط", "err");
+  }
+}
+
+/* ================= Service Worker + أحداث ================= */
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+
+window.addEventListener("online", () => {
+  toast("رجع الإنترنت", "ok");
+  if (S.driveUrl && pendingItems().length) flushQueue(true);
+});
+window.addEventListener("offline", () => toast("قطع الإنترنت — صوّر البونات و غادي يتسجلو من بعد"));
+
+/* ================= إدخالات مخفية ================= */
+const _photoInput = document.createElement("input");
+_photoInput.type = "file";
+_photoInput.accept = "image/*";
+_photoInput.capture = "environment";
+_photoInput.id = "photoInput";
+_photoInput.className = "hidden";
+document.body.appendChild(_photoInput);
+
+init();
+
+</script>
 </body>
 </html>
