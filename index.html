@@ -1455,17 +1455,20 @@ async function runOCR(file) {
     const amountVal = amountHit ? parseAmountStr(amountHit) : "";
     if (amountVal && !curAmount) $("#bAmount").value = amountVal;
 
-    // ---- اسم العامل (الختم هو الأهم، كيبدّل دائما إلا لقيناه) ----
-    const agentHit = lines.filter(l => isAgentLine(l) && !(dateHit && l === dateHit.l) && l !== amountHit)
-      .sort((a, b) => lineLetters(b) - lineLetters(a))[0];
-    if (agentHit && $("#bAgent")) {
+    // ---- اسم العامل (غير إلا كان الحقل موجود، ماشي للعامل) ----
+    const hasAgentField = !!$("#bAgent");
+    const agentHit = hasAgentField
+      ? lines.filter(l => isAgentLine(l) && !(dateHit && l === dateHit.l) && l !== amountHit)
+          .sort((a, b) => lineLetters(b) - lineLetters(a))[0]
+      : null;
+    if (agentHit) {
       const v = afterLabel(agentHit, AGENT_RE);
       if (v && lineLetters(v) > 1) $("#bAgent").value = v;
     }
 
     // ---- اسم الشركة (ما نعمرش فوق حاجة مكتوبة باليد) ----
     const curClient = $("#bClient").value.trim();
-    const skip = new Set([dateHit && dateHit.l, amountHit, agentHit].filter(Boolean));
+    const skip = new Set([dateHit && dateHit.l, amountHit, hasAgentField && agentHit].filter(Boolean));
     const clientHit = lines.filter(l => !skip.has(l) && lineLetters(l) > 2 && !isAmountLine(l))
       .sort((a, b) => {
         const ha = CLIENT_HINT.test(a) ? 1 : 0, hb = CLIENT_HINT.test(b) ? 1 : 0;
