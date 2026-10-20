@@ -587,7 +587,7 @@ const TABS = {
   settings:{ label: "الإعدادات", ico: "settings", adminOnly: true }
 };
 
-const S = { user: null, tab: "home", users: [], items: [], q: "", wf: "all", showCodes: {}, driveUrl: "" };
+const S = { user: null, tab: "home", users: [], items: [], q: "", wf: "all", showCodes: {}, driveUrl: "", lastSync: 0 };
 const _turl = {};
 
 const APPS_SCRIPT_CODE = `function clean_(s) {
@@ -604,20 +604,44 @@ function json_(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function folder_(data) {
+function root_() {
   var rootName = "BONS-CREDIT";
   var it = DriveApp.getFoldersByName(rootName);
-  var root = it.hasNext() ? it.next() : DriveApp.createFolder(rootName);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(rootName);
+}
+
+function folder_(data) {
+  var root = root_();
   var month = clean_(data.month || "sans-mois");
   var day = clean_(data.day || "sans-jour");
   var worker = clean_(data.worker || "autre");
   return child_(child_(child_(root, month), day), worker);
 }
 
+function syncFile_() {
+  var root = root_();
+  var name = "sync.json";
+  var it = root.getFilesByName(name);
+  return it.hasNext() ? it.next() : root.createFile(name, "{}", MimeType.PLAIN_TEXT);
+}
+
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
+
     if (data.action === "ping") return json_({ ok: true });
+
+    if (data.action === "pull") {
+      var f = syncFile_();
+      return json_({ ok: true, data: JSON.parse(f.getBlob().getDataAsString() || "{}") });
+    }
+
+    if (data.action === "sync") {
+      var sf = syncFile_();
+      sf.setContent(JSON.stringify(data.data || {}));
+      return json_({ ok: true, savedAt: new Date().getTime() });
+    }
+
     var folder = folder_(data);
     var blob = Utilities.newBlob(
       Utilities.base64Decode(data.base64),
@@ -683,6 +707,8 @@ async function refreshData() {
   S.items = await dbAll("bons");
   const st = await dbGet("settings", "driveUrl");
   S.driveUrl = (st && st.value) || "";
+  const ls = await dbGet("settings", "lastSync");
+  S.lastSync = (ls && ls.value) || 0;
 }
 function userName(id) {
   const u = S.users.find(x => x.id === id);
@@ -727,6 +753,8 @@ async function init() {
 
   if (S.users.length) showLogin();
   else showSetup();
+
+  if (S.driveUrl && navigator.onLine) setTimeout(() => cloudPullOnly(), 800);
 
   setTimeout(() => {
     if (!S.booted) {
@@ -879,7 +907,10 @@ async function enterApp(u) {
   $("#fab").innerHTML = I.plus;
   renderNav();
   go("home");
-  if (navigator.onLine && S.driveUrl) flushQueue(true);
+  if (navigator.onLine && S.driveUrl) {
+    flushQueue(true);
+    setTimeout(() => cloudSync(true), 1200);
+  }
 }
 
 $("#logoutBtn").onclick = () => {
@@ -1083,6 +1114,7 @@ $("#fab").onclick = () => openBonSheet();
 
 function openBonSheet(editItem) {
   const isEdit = !!editItem;
+  const isWorker = S.user.role !== "admin";
   _pendingPhoto = isEdit ? editItem.photo : null;
   _pendingHash = isEdit ? (editItem.photoHash || "") : "";
   openSheet(isEdit ? "تعديل البون" : "بون كريدي جديد", `
@@ -1107,10 +1139,10 @@ function openBonSheet(editItem) {
       </div>
       <div class="field"><label>المبلغ (دج) *</label>
         <input id="bAmount" inputmode="decimal" required placeholder="مثال: 1500" value="${isEdit ? esc(editItem.amount) : ""}"></div>
-      <div class="field"><label>اسم العامل (اللي مدوّن فالبون)</label>
+      ${isWorker ? "" : `<div class="field"><label>اسم العامل (اللي مدوّن فالبون)</label>
         <input id="bAgent" placeholder="مثال: كريم — الاختياري"></div>
       <div class="field"><label>ملاحظات</label><textarea id="bNotes" placeholder="اختياري">${isEdit ? esc(editItem.notes) : ""}</textarea></div>
-      <div class="field"><label>التاريخ</label><input id="bDate" type="date" value="${isEdit ? esc(editItem.date) : todayISO()}"></div>
+      <div class="field"><label>التاريخ</label><input id="bDate" type="date" value="${isEdit ? esc(editItem.date) : todayISO()}"></div>`}
       <div class="sheet-actions">
         <button type="button" class="btn ghost" data-cancel>إلغاء</button>
         <button type="submit" class="btn primary">${isEdit ? "حفظ التعديل" : "حفظ"}</button>
@@ -1118,7 +1150,7 @@ function openBonSheet(editItem) {
     </form>`);
 
   $("#sheet [data-cancel]").onclick = closeSheet;
-  $("#bAgent").value = isEdit ? (editItem.agentName || editItem.workerName || S.user.name) : S.user.name;
+  if (!isWorker) $("#bAgent").value = isEdit ? (editItem.agentName || editItem.workerName || S.user.name) : S.user.name;
   $("#photoBtn").onclick = () => $("#photoInput").click();
 
   $("#photoInput").onchange = async (e) => {
@@ -1147,7 +1179,10 @@ function openBonSheet(editItem) {
     const client = $("#bClient").value.trim();
     const amount = parseAmt($("#bAmount").value);
     if (!client) return;
-    const date = $("#bDate").value || todayISO();
+    const date = $("#bDate") ? ($("#bDate").value || todayISO()) : todayISO();
+    const agentEl = $("#bAgent");
+    const notesEl = $("#bNotes");
+    const agentVal = agentEl ? agentEl.value.trim() : (isEdit ? (editItem.agentName || "") : S.user.name);
     const dup = findDuplicate(client, amount, date, S.user.id, _pendingHash, isEdit ? editItem.id : null);
     if (dup) {
       const it = dup.item;
@@ -1165,8 +1200,8 @@ function openBonSheet(editItem) {
       d = editItem;
       d.client = client;
       d.amount = amount;
-      d.agentName = $("#bAgent").value.trim();
-      d.notes = $("#bNotes").value.trim();
+      d.agentName = agentVal;
+      d.notes = notesEl ? notesEl.value.trim() : (editItem.notes || "");
       d.date = date;
       d.photo = _pendingPhoto;
       d.photoHash = _pendingHash;
@@ -1180,8 +1215,8 @@ function openBonSheet(editItem) {
         workerName: S.user.name,
         client,
         amount,
-        agentName: $("#bAgent").value.trim(),
-        notes: $("#bNotes").value.trim(),
+        agentName: agentVal,
+        notes: notesEl ? notesEl.value.trim() : "",
         date,
         createdAt: Date.now(),
         photo: _pendingPhoto,
@@ -1330,16 +1365,26 @@ function clientValue(l) {
   return String(l).replace(/[:：]$/, "").trim();
 }
 
+function setVal(sel, v) {
+  const el = $(sel);
+  if (el) el.value = v;
+  return !!el;
+}
+function getVal(sel) {
+  const el = $(sel);
+  return el ? el.value : "";
+}
+
 function assignLine(l) {
   const ds = parseDateStr(l);
-  if (ds) { $("#bDate").value = ds; toast("تم تعويض التاريخ", "ok"); return; }
+  if (ds) { if (setVal("#bDate", ds)) { toast("تم تعويض التاريخ", "ok"); return; } }
   if (isAmountLine(l)) {
     const a = parseAmountStr(l);
     if (a) { $("#bAmount").value = a; toast("تم تعويض المبلغ", "ok"); return; }
   }
   if (isAgentLine(l)) {
     const v = afterLabel(l, AGENT_RE);
-    if (v && lineLetters(v) > 1) { $("#bAgent").value = v; toast("تم تعويض اسم العامل", "ok"); return; }
+    if (v && lineLetters(v) > 1 && setVal("#bAgent", v)) { toast("تم تعويض اسم العامل", "ok"); return; }
   }
   if (lineLetters(l) > 1) {
     $("#bClient").value = clientValue(l);
@@ -1376,9 +1421,9 @@ async function runOCR(file) {
     if (!lines.length) { st.textContent = "ما قدرنا نقرو والو، عبّي يدويا"; return; }
 
     // ---- التاريخ (ما نبدلوش إذا العامل بدلو باليد) ----
-    const curDate = $("#bDate").value;
+    const curDate = getVal("#bDate");
     const dateHit = lines.map(l => ({ l, d: parseDateStr(l) })).find(x => x.d);
-    if (dateHit && (!curDate || curDate === todayISO())) $("#bDate").value = dateHit.d;
+    if (dateHit && (!curDate || curDate === todayISO())) setVal("#bDate", dateHit.d);
 
     // ---- المبلغ (ما نعمرش فوق حاجة مكتوبة باليد) ----
     const curAmount = $("#bAmount").value.trim();
@@ -1390,7 +1435,7 @@ async function runOCR(file) {
     // ---- اسم العامل (الختم هو الأهم، كيبدّل دائما إلا لقيناه) ----
     const agentHit = lines.filter(l => isAgentLine(l) && !(dateHit && l === dateHit.l) && l !== amountHit)
       .sort((a, b) => lineLetters(b) - lineLetters(a))[0];
-    if (agentHit) {
+    if (agentHit && $("#bAgent")) {
       const v = afterLabel(agentHit, AGENT_RE);
       if (v && lineLetters(v) > 1) $("#bAgent").value = v;
     }
@@ -1408,8 +1453,8 @@ async function runOCR(file) {
     const found = [];
     if (clientHit) found.push("الشركة");
     if (amountVal) found.push("المبلغ");
-    if (agentHit) found.push("العامل");
-    if (dateHit) found.push("التاريخ");
+    if (agentHit && $("#bAgent")) found.push("العامل");
+    if (dateHit && $("#bDate")) found.push("التاريخ");
     st.textContent = found.length
       ? `لقينا: ${found.join("، ")} — تأكد و عدّل إذا حاجة غالطة`
       : "ما عرفنا والو بضبط — اضغط على السطر المناسب باش تعويض";
@@ -1866,6 +1911,15 @@ function renderSettings() {
     </div>
 
     <div class="panel">
+      <h3>${I.sync} المزامنة بين الأجهزة</h3>
+      <p>كتسجل العمال و البونات فالهاتف و فPC؟ دير مزامنة و كلشي كيتوحّد تلقائيا عبر Google Drive ديالك. <b>البيانات فقط</b> (بلا صور).</p>
+      <div class="info-line"><span>آخر مزامنة</span><b id="lastSyncTxt">${S.lastSync ? fmtDate(S.lastSync) : "— ما زال"}</b></div>
+      <div class="row">
+        <button class="btn primary" id="syncBtn">${I.sync} زامن دابا</button>
+      </div>
+    </div>
+
+    <div class="panel">
       <h3>النسخ الاحتياطي (بلا إنترنت)</h3>
       <p>صدّر معلومات البونات والعمال لملف و حملو فالجهاز الآخر. <b>الصور ماشي داخلة</b> — الصور كتمشي للجوجل درايف.</p>
       <div class="row">
@@ -1916,6 +1970,7 @@ function renderSettings() {
   $("#xClients").onclick = exportClientsExcel;
   $("#xWorkersBons").onclick = exportWorkersBonsExcel;
   $("#xClientsBons").onclick = exportClientsBonsExcel;
+  $("#syncBtn").onclick = () => cloudSync(false);
 
   $("#copyCode").onclick = async () => {
     try {
@@ -2008,6 +2063,93 @@ function exportJSON() {
   toast("تم تصدير النسخة", "ok");
 }
 
+function cloudPayload() {
+  return {
+    app: "bons-credit",
+    version: 2,
+    updatedAt: Date.now(),
+    users: S.users,
+    bons: S.items.map(({ photo, ...rest }) => rest)
+  };
+}
+
+async function cloudRequest(action, extra) {
+  if (!S.driveUrl) throw new Error("ما كاين حتى رابط Drive فالإعدادات");
+  const res = await fetch(S.driveUrl, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(Object.assign({ action }, extra || {}))
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "خطأ فالسيرفر");
+  return data;
+}
+
+async function mergeRemote(remote) {
+  const ver = (x) => x.editedAt || x.createdAt || x.sentAt || x.lastSeen || 0;
+  let n = 0;
+  for (const ru of remote.users || []) {
+    if (!ru || !ru.id) continue;
+    const local = S.users.find(x => x.id === ru.id);
+    if (!local) { await dbPut("users", ru); n++; }
+    else if (ver(ru) > ver(local) && ru.id !== (S.user && S.user.id)) {
+      await dbPut("users", Object.assign({}, local, ru));
+      n++;
+    }
+  }
+  for (const rd of remote.bons || []) {
+    if (!rd || !rd.id) continue;
+    const local = S.items.find(x => x.id === rd.id);
+    if (!local) { await dbPut("bons", Object.assign({ photo: null }, rd)); n++; }
+    else if (ver(rd) > ver(local)) {
+      await dbPut("bons", Object.assign({}, local, rd, { photo: local.photo }));
+      n++;
+    }
+  }
+  return n;
+}
+
+let _syncing = false;
+async function cloudPullOnly() {
+  if (_syncing || !S.driveUrl || !navigator.onLine) return;
+  _syncing = true;
+  try {
+    const pull = await cloudRequest("pull");
+    const added = mergeRemote(pull.data || {});
+    if (added) {
+      await refreshData();
+      if (!S.user) {
+        if (S.users.length) showLogin();
+      } else {
+        go(S.tab);
+      }
+    }
+  } catch (e) { /* صامت */ }
+  finally { _syncing = false; }
+}
+async function cloudSync(silent) {
+  if (_syncing) return;
+  if (!S.driveUrl) { if (!silent) toast("زيد رابط Google Drive فالإعدادات", "err"); return; }
+  if (!navigator.onLine) { if (!silent) toast("ما كاينش إنترنت دابا", "err"); return; }
+  _syncing = true;
+  try {
+    const pull = await cloudRequest("pull");
+    const added = mergeRemote(pull.data || {});
+    if (added) await refreshData();
+    await cloudRequest("sync", { data: cloudPayload() });
+    S.lastSync = Date.now();
+    await dbPut("settings", { key: "lastSync", value: S.lastSync });
+    const lt = $("#lastSyncTxt");
+    if (lt) lt.textContent = fmtDate(S.lastSync);
+    if (S.tab) go(S.tab);
+    if (!silent || added) toast(added ? `تمت المزامنة — ${added} جديد` : "كلشي محدّث", "ok");
+  } catch (e) {
+    if (!silent) toast("تعذّرت المزامنة: " + e.message, "err");
+  } finally {
+    _syncing = false;
+  }
+}
+
 async function importJSON(file) {
   try {
     const data = JSON.parse(await file.text());
@@ -2025,6 +2167,7 @@ async function importJSON(file) {
     await refreshData();
     go(S.tab);
     toast(n ? `تمت المزامنة: ${n} عنصر جديد` : "ما كاين حتى حاجة جديدة", n ? "ok" : "");
+    if (n && S.driveUrl && navigator.onLine) cloudSync(true);
   } catch (e) {
     toast("الملف غالط", "err");
   }
@@ -2038,6 +2181,7 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 window.addEventListener("online", () => {
   toast("رجع الإنترنت", "ok");
   if (S.driveUrl && pendingItems().length) flushQueue(true);
+  if (S.driveUrl && S.user) cloudSync(true);
 });
 window.addEventListener("offline", () => toast("قطع الإنترنت — صوّر البونات و غادي يتسجلو من بعد"));
 

@@ -34,20 +34,44 @@ function json_(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function folder_(data) {
+function root_() {
   var rootName = "BONS-CREDIT";
   var it = DriveApp.getFoldersByName(rootName);
-  var root = it.hasNext() ? it.next() : DriveApp.createFolder(rootName);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(rootName);
+}
+
+function folder_(data) {
+  var root = root_();
   var month = clean_(data.month || "sans-mois");
   var day = clean_(data.day || "sans-jour");
   var worker = clean_(data.worker || "autre");
   return child_(child_(child_(root, month), day), worker);
 }
 
+function syncFile_() {
+  var root = root_();
+  var name = "sync.json";
+  var it = root.getFilesByName(name);
+  return it.hasNext() ? it.next() : root.createFile(name, "{}", MimeType.PLAIN_TEXT);
+}
+
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
+
     if (data.action === "ping") return json_({ ok: true });
+
+    if (data.action === "pull") {
+      var f = syncFile_();
+      return json_({ ok: true, data: JSON.parse(f.getBlob().getDataAsString() || "{}") });
+    }
+
+    if (data.action === "sync") {
+      var sf = syncFile_();
+      sf.setContent(JSON.stringify(data.data || {}));
+      return json_({ ok: true, savedAt: new Date().getTime() });
+    }
+
     var folder = folder_(data);
     var blob = Utilities.newBlob(
       Utilities.base64Decode(data.base64),
